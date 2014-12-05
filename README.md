@@ -66,8 +66,8 @@ Movisens EkgMove | Chest         | ECG              | 1024 Hz             | bina
                  |               | 3D accelerometry | 64 Hz               | binary
                  |               | baropressure     | 2 Hz                | binary
                  |               | skin temperature | 2 Hz                | binary
-Dimesimeter      | Inner & outer clothing, chest | Light
-iButton          | Inner & outer clothing, chest | Temperature
+Dimesimeter      | Inner & outer clothing, chest | Light | |
+iButton          | Inner & outer clothing, chest | Temperature | |
                  |               | Humidity         |
 Philips          | Index finger  | skin temperature | 2 Hz                | csv
 Mobile phone     |               | subjective       | 10/day              | csv
