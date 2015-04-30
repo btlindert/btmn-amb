@@ -40,14 +40,14 @@ for iSubject = SUBJECTS
     f = regexpi({fp.name}, ['.*' SUBJECT '.*sweater.*'], 'match');
     f = [f{:}]; 
     if ~isempty(f)
-        INNER = [PATH f{1}];
+        INNER = [PATH SUBJECT SUB_PATH f{1}];
     end
     
     % OUTER
     f = regexpi({fp.name}, ['.*' SUBJECT '.*coat.*'], 'match');
     f = [f{:}];
     if ~isempty(f)
-        OUTER = [PATH f{1}];
+        OUTER = [PATH SUBJECT SUB_PATH f{1}];
     end
     
     % Load iButton data from coat and sweater.
