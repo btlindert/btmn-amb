@@ -25,7 +25,7 @@ for iSubject = SUBJECTS
 
     % Load all the timestamps for this subject.
     [id, subjectId, alarmLabels, alarmCounter, formLabels, alarmTimestamps] ...
-        = timestampRead2(TIMESTAMPS);
+        = timestampRead(TIMESTAMPS);
     
     % Set vars to empty or remove.
     OUTER = '';
