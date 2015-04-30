@@ -1,64 +1,109 @@
-% ambientTemperature analyzes the data from the iButton sensors at the
-% coat and sweater.
+% analyzeAmbientTemperature analyzes the temperature data from the iButton 
+% sensors at the coat and sweater.
 
 % Path order is as follows:
 % /data1/recordings/btmn/subjects/0000
 %   /temperature/raw
-%       /btmn_0000_temperature_coat.txt
-%       /btmn_0000_temperature_sweater.txt
-PATH     = '/data1/recordings/btmn/subjects/';
-SUB_PATH = '/temperature/raw/';
+%       /btmn_0000_temperature_coat.txt/.csv
+%       /btmn_0000_temperature_sweater.txt/.csv
 
-OUTPUT_FOLDER = '/..../';
+PATH            = '/data1/recordings/btmn/subjects/';
+SUB_PATH        = '/temperature/raw/';
+PATH_TIMESTAMPS = '/data1/recordings/btmn/import/150430_behavior_blindert/';
+OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/ambient-temperature/';
+MISSING         = [5, 7, 10, 17, 18, 21, 29, 39];
+ALL             = 1:44;
+SUBJECTS        = setdiff(ALL, MISSING);
 
-fid = fopen([OUTPUT_FOLDER 'ambient-temperature.csv'], 'a');
-fprintf(fid, '%s,%s,%s,%s\n',...
-    'subjectId', 'alarmId', 'aveTempOuter', 'aveTempInner');       
-
-
-% Select subjects.
-for iSubject = [1,2,3]
-   
-    SUBJECT = sprintf('%04.0f', iSubject);    
+for iSubject = SUBJECTS
     
-    % Load all the timestamps for this subject. Use the Philips temperature
-    % time stamps, beacuse these already contain the correct date and start
-    % at the correct time (i.e. 15 min prior to alarm).    
-    timestamps = stampRead(filename);
+    % Subject string.
+    SUBJECT = sprintf('%04.0f', iSubject);
+
+    % Path to timestamps.
+    TIMESTAMPS = [PATH_TIMESTAMPS 'btmn_' SUBJECT '_behavior_mobile_timestamps.csv'];
+
+    % Load all the timestamps for this subject.
+    [id, subjectId, alarmLabels, alarmCounter, formLabels, alarmTimestamps] ...
+        = timestampRead(TIMESTAMPS);
+
+    % Set vars to empty or remove.
+    OUTER = '';
+    INNER = '';        
+    clear('humInner');
+    clear('humOuter');
     
-    % Paths to iButton files.
-    SWEATER = [PATH SUBJECT SUB_PATH 'bmtn_' SUBJECT,...
-        '_temperature_sweater.txt'];
-    COAT    = [PATH SUBJECT SUB_PATH 'btmn_' SUBJECT,...
-        '_temperature_coat.txt'];
-
-    % Load iButton data from coat and sweater, sampling is 1
-    % minute???????????????
-    [tempOuter, ~] = ibuttonRead(SWEATER);
-    [tempInner, ~] = ibuttonRead(COAT);
-
-    for iStamp = 1:numel(timestamps)
+    % Find the files (either .csv or .txt files).
+    fp = dir([PATH SUBJECT SUB_PATH]);
+    
+    % INNER
+    f = regexpi({fp.name}, ['.*' SUBJECT '.*sweater.*'], 'match');
+    f = [f{:}]; 
+    if ~isempty(f)
+        INNER = [PATH f{1}];
+    end
+    
+    % OUTER
+    f = regexpi({fp.name}, ['.*' SUBJECT '.*coat.*'], 'match');
+    f = [f{:}];
+    if ~isempty(f)
+        OUTER = [PATH f{1}];
+    end
+    
+    % Load iButton data from coat and sweater.
+    if ~isempty(INNER)
+        temperatureInner = ibuttonTemperatureRead(INNER);
+    end
+    
+    if ~isempty(OUTER)
+        temperatureOuter = ibuttonTemperatureRead(OUTER);
+    end
+    
+     % Open file and write headers.
+    fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-temperature_features.csv'], 'w');
+    fprintf(fid, [repmat('%s, ', 1, 8), '%s\n'],...
+        'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
+        'alarmTime', 'startTime', 'endTime', ...
+        'meanTemperatureInner', 'meanTemperatureOuter');              
+    fclose(fid);
+    
+    for iStamp = 1:numel(alarmTimestamps)
     
         % Alarm timestamp.
-        alarmTime = timestamps(iStamp);
+        alarmTime = alarmTimestamps(iStamp);
         
         % Get 20 minute period of data around the phone alarms;
         % Add 5 min; subtract 15 min.
-        startTime = alarmTime;
-        endTime   = addToDate(alarmTime, 20, 'minute');
+        startTime = addtodate(alarmTime, -15, 'minute');
+        endTime   = addtodate(alarmTime, 5, 'minute');
         
-        tempOuterData = getSamplesUsingTime(tempOuter, startTime, endTime);
-        tempInnerData    = getSamplesUsingTime(tempInner, startTime, endTime);
-       
-        % Mean temperature.     
-        aveTempOuter = mean(tempOuterData);
-        aveTempInner    = mean(tempInnerData);
+        if ~isempty(INNER)
+            temperatureInnerData = getsampleusingtime(temperatureInner, startTime, endTime);
+            meanTemperatureInner = mean(temperatureInnerData);
+        else
+            meanTemperatureInner = [];
+        end
         
-        fprintf(fid, '%f,%f,%f,%f\n', ...
-            iSubject, iStamp, aveTempOuter, aveTempInner);
+        if ~isempty(OUTER)
+            temperatureOuterData = getsampleusingtime(temperatureOuter, startTime, endTime);
+            meanTemperatureOuter = mean(temperatureOuterData);        
+        else
+            meanTemperatureOuter = [];
+        end
+        
+        % Write data to txt file.
+        alarmLabel = alarmLabels{iStamp};
+        formLabel = formLabels{iStamp};
+        
+        fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-temperature_features.csv'], 'a');
+        fprintf(fid, '%4.0f, %4.0f, %s, %s, %s, %s, %s, %4.2f, %4.2f\n', ...
+                 iSubject, alarmCounter(iStamp), alarmLabel, formLabel, ...
+                 datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
+                 datestr(startTime, 'dd-mm-yyyy HH:MM'), ...
+                 datestr(endTime, 'dd-mm-yyyy HH:MM'), ...
+                 meanTemperatureInner, meanTemperatureOuter);
+        fclose(fid);
              
     end
     
 end
-
-fclose(fid);
