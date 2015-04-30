@@ -1,64 +1,109 @@
-% ambientHumidity analyzes the data from the iButton sensors at the
-% coat and sweater.
+% analyzeAmbientHumidity analyzes the humidity data from the iButton hydrochron
+% sensors at the coat and sweater.
 
 % Path order is as follows:
 % /data1/recordings/btmn/subjects/0000
-%   /temperature/raw
-%       /btmn_0000_temperature_coat.txt
-%       /btmn_0000_temperature_sweater.txt
-PATH     = '/data1/recordings/btmn/subjects/';
-SUB_PATH = '/temperature/raw/';
+%   /humidity/raw
+%       /btmn_0000_humidity_coat.txt/.csv
+%       /btmn_0000_humidity_sweater.txt/.csv
 
-OUTPUT_FOLDER = '/..../';
+PATH            = '/data1/recordings/btmn/subjects/';
+SUB_PATH        = '/humidity/raw/';
+PATH_TIMESTAMPS = '/data1/recordings/btmn/import/150430_behavior_blindert/';
+OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/ambient-humidity/';
+MISSING         = [5, 7, 10, 17, 18, 21, 29, 39];
+ALL             = 1:44;
+SUBJECTS        = setdiff(ALL, MISSING);
 
-fid = fopen([OUTPUT_FOLDER 'ambient-humidity.csv'], 'a');
-fprintf(fid, '%s,%s,%s,%s\n',...
-    'subjectId', 'alarmId', 'aveHumOuter', 'aveHumInner');       
-
-
-% Select subjects.
-for iSubject = [1,2,3]
-   
-    SUBJECT = sprintf('%04.0f', iSubject);    
+for iSubject = SUBJECTS
     
-    % Load all the timestamps for this subject. Use the Philips temperature
-    % time stamps, beacuse these already contain the correct date and start
-    % at the correct time (i.e. 15 min prior to alarm).    
-    timestamps = stampRead(filename);
+    % Subject string.
+    SUBJECT = sprintf('%04.0f', iSubject);
+
+    % Path to timestamps.
+    TIMESTAMPS = [PATH_TIMESTAMPS 'btmn_' SUBJECT '_behavior_mobile_timestamps.csv'];
+
+    % Load all the timestamps for this subject.
+    [id, subjectId, alarmLabels, alarmCounter, formLabels, alarmTimestamps] ...
+        = timestampRead2(TIMESTAMPS);
     
-    % Paths to iButton files.
-    SWEATER = [PATH SUBJECT SUB_PATH 'bmtn_' SUBJECT,...
-        '_humidity_sweater.txt'];
-    COAT    = [PATH SUBJECT SUB_PATH 'btmn_' SUBJECT,...
-        '_humidity_coat.txt'];
-
-    % Load iButton data from coat and sweater, sampling is 1
-    % minute???????????????
-    [~ , humOuter] = ibuttonRead(SWEATER);
-    [~ , humInner] = ibuttonRead(COAT);
-
-    for iStamp = 1:numel(timestamps)
+    % Set vars to empty or remove.
+    OUTER = '';
+    INNER = '';        
+    clear('humInner');
+    clear('humOuter');
+    
+    % Find the files (either .csv or .txt files).
+    fp = dir([PATH SUBJECT SUB_PATH]);
+    
+    % INNER.
+    f = regexpi({fp.name}, ['.*' SUBJECT '.*sweater.*'], 'match');
+    f = [f{:}]; 
+    if ~isempty(f)
+        INNER = [PATH f{1}];
+    end
+    
+    % OUTER.
+    f = regexpi({fp.name}, ['.*' SUBJECT '.*coat.*'], 'match');
+    f = [f{:}];
+    if ~isempty(f)
+        OUTER = [PATH f{1}];
+    end
+    
+    % Load iButton data from coat and sweater.
+    if ~isempty(INNER)
+        humInner = ibuttonHumidityRead(INNER);
+    end
+    
+    if ~isempty(OUTER)
+        humOuter = ibuttonHumidityRead(OUTER);
+    end
+    
+     % Open file and write headers.
+    fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-humidity_features.csv'], 'w');
+    fprintf(fid, [repmat('%s, ', 1, 8), '%s\n'],...
+        'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
+        'alarmTime', 'startTime', 'endTime', ...
+        'meanHumidityInner', 'meanHumidityOuter');              
+    fclose(fid);
+    
+    for iStamp = 1:numel(alarmTimestamps)
     
         % Alarm timestamp.
-        alarmTime = timestamps(iStamp);
+        alarmTime = alarmTimestamps(iStamp);
         
         % Get 20 minute period of data around the phone alarms;
         % Add 5 min; subtract 15 min.
-        startTime = alarmTime;
-        endTime   = addToDate(alarmTime, 20, 'minute');
+        startTime = addtodate(alarmTime, -15, 'minute');
+        endTime   = addtodate(alarmTime, 5, 'minute');
         
-        humSweaterData  = getSamplesUsingTime(humOuter, startTime, endTime);
-        humCoatData     = getSamplesUsingTime(humInner, startTime, endTime);
-       
-        % Mean humidity.
-        aveHumSweater = mean(humSweaterData);
-        aveHumCoat    = mean(humCoatData);        
+        if ~isempty(INNER)
+            humidityInnerData = getsampleusingtime(humInner, startTime, endTime);
+            meanHumidityInner = mean(humidityInnerData);
+        else
+            meanHumidityInner = [];
+        end
         
-        fprintf(fid, '%f,%f,%f,%f\n', ...
-            iSubject, iStamp, aveHumSweater, aveHumCoat);
+        if ~isempty(OUTER)
+            humidityOuterData = getsampleusingtime(humOuter, startTime, endTime);
+            meanHumidityOuter = mean(humidityOuterData);        
+        else
+            meanHumidityOuter = [];
+        end
+        
+        % Write data to txt file.
+        alarmLabel = alarmLabels{iStamp};
+        formLabel = formLabels{iStamp};
+        
+        fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-humidity_features.csv'], 'a');
+        fprintf(fid, '%4.0f, %4.0f, %s, %s, %s, %s, %s, %4.2f, %4.2f\n', ...
+                 iSubject, alarmCounter(iStamp), alarmLabel, formLabel, ...
+                 datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
+                 datestr(startTime, 'dd-mm-yyyy HH:MM'), ...
+                 datestr(endTime, 'dd-mm-yyyy HH:MM'), ...
+                 meanHumidityInner, meanHumidityOuter);
+        fclose(fid);
              
     end
     
 end
-
-fclose(fid);
