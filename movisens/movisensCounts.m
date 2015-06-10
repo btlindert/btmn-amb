@@ -1,8 +1,12 @@
 function act = movisensCounts(ts)
+% movisensCounts converts accelerometry recorded from the wrist with a
+% MoveII sensor to actigraphy counts that are used to estimate sleep
+% parameters.
 
+% Fixed sampling frequency.
 fs = 64;
 
-% Get ts data
+% Get ts data.
 data = ts.Data;
 time = ts.Time;
 

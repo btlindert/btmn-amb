@@ -1,64 +1,287 @@
-function data = posture(iSubject, alarms) 
-% Posture estimation based on chest and thigh acc data.
+function modeClassification = posture(dataChest, dataThigh, plots)
+% POSTURE classifies posture based on the inclination of the thigh and
+% chest sensors using a fixed threshold classification algorithm by Lugade
+% 2014 169.
 
+% Arguments:
+%   chestData - [N-by-3] matrix with chest x,y,z accelerometry.
+%   thighData - [N-by-3] matrix with thigh x,y,z accelerometry. 
+%   plots     - 'on' or 'off' (default). 
+%
+% Results:
+%   classification - Vector with classification number per second.
+%       0 - dynamic
+%       1 - lying right
+%       2 - prone
+%       3 - lying left
+%       4 - supine
+%       5 - sitting
+%       6 - standing
+%       7 - undefined
+%
+% Copyright (c) 2015 Bart te Lindert
+    
+dataChest = [dataChest.ACCX.Data, dataChest.ACCY.Data, dataChest.ACCZ.Data];
+dataThigh = [dataThigh.ACCX.Data, dataThigh.ACCY.Data, dataThigh.ACCZ.Data];
 
-% Folder paths.
-UNISENS_FOLDER  = '/Volumes/data1/recordings/btmn/import/140806_actigraphy_blindert/';
-SIMLINK_FOLDER  = '/Users/me/Data/btmn/tmp/';
+%% Chest
+% In upright posture, the axes are oriented as follows relative to gravity:
+%   x - vertical
+%   y - lateral
+%   z - anterior/posterior
+%  +ve x-axis is downward in normal placement, so any angle should be
+%  calculated relative to [1, 0, 0].
+%  Leaning forward and backward movement is a rotation around the y-axis 
+%  in the (x, z) plane.
+gChestUpright = [1, 0, 0];
 
-% Subject string id.
-iSubjectStr = sprintf('%04.0f', iSubject);
+% In supine posture, the axes are oriented as follows relative to gravity:
+%   x - anterior/posterior
+%   y - lateral
+%   z - vertical
+%  +ve z-axis is downward in normal placement, so any angle should be
+%  calculated relative to [0, 0, 1].
+%  Tranverse rotation is therefore rotation around the x-axis in the (y, z) 
+% plane.
+% gChestSupine = [0, 0, 1];
 
-% Create filenames.
-CHEST_ACC = ['btmn_' iSubjectStr '_actigraphy_chest_acc.bin'];
-CHEST_XML = ['btmn_' iSubjectStr '_actigraphy_chest_unisens.xml'];
-THIGH_ACC = ['btmn_' iSubjectStr '_actigraphy_thigh-left_acc.bin'];
-THIGH_XML = ['btmn_' iSubjectStr '_actigraphy_thigh-left_unisens.xml'];
+% Let's start by calculating the angles.
+chestAngle3D = zeros(size(dataChest, 1), 1);
+chestTransverseAngle2D = zeros(size(dataThigh, 1), 1);
 
-% Generate symbolic links on the fly in a /tmp folder.
-% Unisens data can only be loaded with the toolbox if the filenames are
-% acc|ecg|press|temp|tempskin.bin and in the same folder as the
-% unisens.xml.
+for i = 1:size(dataChest, 1)
 
-% Load chest acc data.
-status = system(['ln -s ' UNISENS_FOLDER CHEST_XML ' ',...
-    SIMLINK_FOLDER 'unisens.xml']);
-status = system(['ln -s ' UNISENS_FOLDER CHEST_ACC ' ',...
-    SIMLINK_FOLDER 'acc.bin']);
+    % First we calculate the inclination of the chest sensor. We assume an
+    % angle relative to [1,0,0] close to 0 in upright posture, and near 90 
+    % in supine posture. This angle is in 3 dimensions. 
+    chestAngle3D(i) = atan2(norm(cross(dataChest(i, :), gChestUpright)), ...
+        dot(dataChest(i, :), gChestUpright))./pi*180;
 
-accChest = unisens_get_data(SIMLINK_FOLDER, 'acc.bin', 'all');
+    % Once a subject is in supine posture, we want to calculate the transverse 
+    % angle to estimate supine, prone, lying left or right. To get an angle 
+    % between 0 and 360 we reduce the problem to 2D. We assume [0,0,1] in
+    % supine posture i.e. [0,1] (y,z) in 2D:
+    y1 = 0;
+    z1 = 1;
+    y2 = dataChest(i,2);
+    z2 = dataChest(i,3);
+    chestTransverseAngle2D(i) = mod(atan2(y1*z2 - y2*z1, y1*y2 + z1*z2), 2*pi)./pi*180;   
 
-% Load thigh acc data.
-status = system(['ln -s ' UNISENS_FOLDER THIGH_XML ' ',...
-    SIMLINK_FOLDER 'unisens.xml']);
-status = system(['ln -s ' UNISENS_FOLDER THIGH_ACC ' ',...
-    SIMLINK_FOLDER 'acc.bin']);
+end
 
-accThigh = unisens_get_data(SIMLINK_FOLDER, 'acc.bin', 'all');
+%% Thigh 
+% In upright posture, the axes are oriented as follows relative to gravity:
+%  x - vertical
+%  y - anterior/posterior
+%  z - lateral
+% +ve x-axis is downward in normal placement, the angle should be
+% calculated relative to [1, 0, 0].
+% Forward and backward movement of the legs means rotation around the z-axis 
+% in the x,y plane).
+gThighUpright = [1, 0, 0];
 
-% Extract start time from the unisens.xml file.
-str       = movisens.movisensXmlRead([SIMLINK_FOLDER 'unisens.xml']); 
-startTime = str.Attributes(4).Value;
-startTime = datenum(startTime, 'yyyy-mm-ddTHH:MM:SS.FFF'); % note T in the middle!
+for i = 1:size(dataThigh, 1)
+    
+    % We calculate the inclination of the thigh sensor. We assume an
+    % angle relative to [1,0,0] close to 0 in upright posture, and near 90 
+    % in supine or sitting posture. This angle is in 3 dimensions.  
+    thighAngle3D(i) = atan2(norm(cross(dataThigh(i, :), gThighUpright)), ...
+        dot(dataThigh(i, :), gThighUpright))./pi*180;
+    
+end
 
-% Add event to timeseries objects and loop through events?????
+%% Median filter.
+% Median filter data : window size of 3 to each of the raw acc signals.
+dataChest = medfilt1(dataChest, 3);
+dataThigh = medfilt1(dataThigh, 3);
 
-% Loop through all alarms, to estimate posture, activity.
-for iTrigger = 1:nTriggers
+%% Signal vector magnitude.
+% Of the chest sensor.
+svmChest = sqrt(dataChest(:,1).^2 + dataChest(:,2).^2 + dataChest(:,3).^2);
 
+%% Low-pass filter
+% 3rd order zero phase lag elliptical low pass filter, cut-off 0.25 Hz,
+% 0.01 dB passband ripple and -100 dB stopband ripple.
+fs    = 64;
+order = 3;
+Rp    = 0.01;
+Rs    = 100;
+Wp    = 0.25/(fs/2);
+ftype = 'low';
+[b, a] = ellip(order, Rp, Rs, Wp, ftype);
 
-    % Use wrist data to estimate activity/energy expenditure.
-    % - call function activity(accWrist) -> validated in movisens
-    % paper?
+gravitationChest  = filter(b, a, dataChest);
+bodilyMotionChest = dataChest - gravitationChest;
 
-    % Use chest and thigh data to estimate posture.
-    % - call function posture(accThigh, accChest)
+%% Signal magnitude area.
+% The bodily motion component was utilized in determining static versus 
+% dynamic activity, with signal magnitude area (SMA) values above a 
+% threshold of 0.135g identified as movement [19]. The signal magnitude area 
+% was computed over each 1 s window (t) across all three orthogonal axes 
+% (ax, ay, az).
+seconds = floor(size(bodilyMotionChest, 1)/fs);
+data = bodilyMotionChest(1:seconds*fs,:);
+data = reshape(data, [fs seconds 3]);
 
-    % Select data around the trigger, 15min before, 5min after
-    trigger   = datenum(time);
-    starttime = addtodate(trigger, -15, 'minute');
-    endtime   = addtodate(trigger, 5, 'minute');
-    data      = getsampleusingtime(ts, starttime, endtime);
+% Calculate SMA across each second, first across fs, then across all 3
+% axes and divide by sampling rate.
+SMA = sum(sum(abs(data), 1), 3)./fs;
 
+%% Continuous wavelet transform.
+% Daubechies 4 mother wavelet on waist/chest signal. If data in range
+% 0.1-2.0 Hz has scaling threshold > 1.5 it is movement.
+wname = 'db4';
+data = svmChest;
+delta = 1/fs;
+Fc = centfrq(wname);
+Fmin = 0.1;
+Fmax = 2;
+minScale = Fc/(Fmin*delta);
+maxScale = Fc/(Fmax*delta);
+scales = 20:20:460;
+coefs = cwt(data, scales, wname);
+CWT = max(abs(coefs));
+freq = scal2frq(scales, wname, delta);
+
+%% Classification
+% Per second.
+for i = 1:fs:seconds*fs;
+    
+    sec      = floor((i+fs-1)/fs);
+    sma      = SMA(sec);
+    cwtt     = max(CWT(i:i+fs-1));
+    chestA   = mean(chestAngle3D(i:i+fs-1));
+    chestTA  = mean(chestTransverseAngle2D(i:i+fs-1));
+    thighA   = mean(thighAngle3D(i:i+fs-1));
+   
+    % Static vs dynamic.
+    movement = 'dynamic';
+    if sma <= 0.135    
+        % Relabel to static movement.
+        movement = 'static';
+        
+        if cwtt > 1.5
+            % Relabel static back to dynamic.
+            movement = 'dynamic';
+    
+        end
+        
+    end
+
+    if strcmpi(movement, 'static')
+    % Static orientation.
+        if chestA < 50 || chestA > 130
+        % Upright || Inverted
+            if thighA < 45 || thighA > 135
+                % Upright || Inverted
+                classification(sec) = 6; % standing
+            else
+                classification(sec) = 5; % sitting
+            end           
+        elseif chestA >= 50 && chestA <= 130 
+        % Lying down.
+        % Chest sensor inversion has no effect on the transverse angle.
+            if chestTA < 45 || chestTA >= 315
+                classification(sec) = 4; % supine
+            elseif chestTA >= 45 && chestTA < 135
+                classification(sec) = 3; % right
+            elseif chestTA >= 135 && chestTA < 225
+                classification(sec) = 2; % prone
+            elseif chestTA >= 225 && chestTA < 315
+                classification(sec) = 1; % left   
+            end      
+        end
+%         else
+%             % Undefined.
+%             classification(sec) = 7; % undefined
+%         end
+    elseif strcmpi(movement, 'dynamic')
+        classification(sec) = 0; % dynamic
+    end
+end
+
+%% Mode posture.
+% Choose the most frequently occuring posture.
+modeClassification = mode(classification);
+
+%% Plots
+if strcmpi(plots, 'on')
+
+    figure(1);
+    subplot(11,1,1)
+    plot(dataChest);
+    axis tight
+    ylim([-2, 2]);
+    title('chest raw data');
+    legend('x', 'y', 'z');
+
+    subplot(11,1,2)
+    plot(chestAngle3D);
+    axis tight
+    ylim([0, 180]);
+    title('chest saggital angle');
+    legend('3D');
+    set(gca, 'YTick', [0, 50, 130, 180]);
+    grid on
+
+    subplot(11,1,3);
+    plot(chestTransverseAngle2D, 'r');
+    title('chest transvers angle');
+    axis tight
+    ylim([0 360]);
+    legend('2D');
+    set(gca, 'YTick', [0, 45, 135, 225, 315, 360]);
+    grid on
+
+    subplot(11,1,4)
+    plot(bodilyMotionChest);
+    title('chest bodily motion');
+    axis tight
+
+    subplot(11,1,5);
+    plot(SMA); hold on;
+    plot([1 length(SMA)], [0.135 0.135], 'g'); hold off;
+    title('chest SMA'); 
+    axis tight
+    ylim([0, 1]);
+
+    subplot(11,1,6);
+    contourf(1:numel(data), freq, coefs);
+    axis tight
+    title('chest CWT');
+
+    subplot(11,1,7);
+    plot(CWT); hold on;
+    plot([1 length(CWT)], [1.5 1.5], 'g'); hold off;
+    axis tight
+    title('chest scaling');
+    ylim([0, 5]);
+
+    subplot(11,1,8);
+    plot(dataThigh);
+    title('thigh raw data');
+    axis tight
+    ylim([-2, 2]);
+
+    subplot(11,1,9)
+    plot(thighAngle3D);
+    title('thigh saggital angle');
+    axis tight
+    ylim([0 90]);
+    set(gca, 'YTick', [0, 45, 90]);
+    grid on
+
+    subplot(11,1,10:11);
+    bar(classification)
+    title('classification');
+    axis tight
+    ylim([0, 7]);
+    ax = gca;
+    set(ax, 'YTick', 0:7);
+    set(ax, 'YTickLabel', {'dynamic', 'left', 'prone', 'right', ...
+        'supine', 'sitting', 'standing', 'undefined'});
+    grid on
+
+end
 
 end
