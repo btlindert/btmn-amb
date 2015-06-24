@@ -1,8 +1,7 @@
 function analyzeAmbientHumidity(SUBJECT)
-
 % analyzeAmbientHumidity analyzes the humidity data from the iButton hydrochron
 % sensors at the coat and sweater.
-
+%
 % Path order is as follows:
 % /data1/recordings/btmn/subjects/0000
 %   /humidity/raw
@@ -11,15 +10,17 @@ function analyzeAmbientHumidity(SUBJECT)
 
 PATH            = '/data1/recordings/btmn/subjects/';
 SUB_PATH        = '/humidity/raw/';
-PATH_TIMESTAMPS = '/data1/recordings/btmn/import/';%150430_behavior_blindert/';
+PATH_TIMESTAMPS = '/data1/recordings/btmn/import/';
 OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/ambient-humidity/';
 
 
-% Force input to be string
+% Force input to be string.
 SUBJECT = char(SUBJECT);
+
 
 % Recursively find path to timestamps file.
 files = subdir([PATH_TIMESTAMPS, 'btmn_' SUBJECT '_behavior_mobile_timestamps.csv']);
+
 
 % Proceed if there is only 1 file.
 if size(files, 1) == 1
@@ -70,27 +71,28 @@ if size(files, 1) == 1
 
 end
 
+
 % If either file exists, proceed.     
 if ~isempty(INNER) || ~isempty(OUTER)
 
     % Open file and write headers.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-humidity_features.csv'], 'w');
-    fprintf(fid, [repmat('%s, ', 1, 8), '%s\n'],...
+    fprintf(fid, [repmat('%s, ', 1, 16), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
         'alarmTime', 'startTime', 'endTime', ...
         'meanHumidityInner60', 'meanHumidityInner45', 'meanHumidityInner30', 'meanHumidityInner15', 'meanHumidityInner0', ...
         'meanHumidityOuter60', 'meanHumidityOuter45', 'meanHumidityOuter30', 'meanHumidityOuter15', 'meanHumidityOuter0');              
     fclose(fid);
 
-
+    % Loop through all alarms.
     for iStamp = 1:numel(alarmTimestamps)
 
         % Alarm timestamp.
         alarmTime = alarmTimestamps(iStamp);
 
         % Declare vars.
-        meanHumidityInner = [];
-        meanHumidityOuter = [];  
+        meanHumidityInner = zeros(1,5);
+        meanHumidityOuter = zeros(1,5);  
         
         % Onset and offset of analysis periods.
         onset  = [-60, -45, -30, -15, 0];
@@ -104,26 +106,31 @@ if ~isempty(INNER) || ~isempty(OUTER)
             startTime = addtodate(alarmTime, onset(timeSlot), 'minute');
             endTime   = addtodate(alarmTime, offset(timeSlot), 'minute');
 
-            if ~isempty(INNER)
+            % Extract data.
+            humidityInnerData = getsampleusingtime(humInner, startTime, endTime);
+            
+            % Extract features.
+            if ~isempty(humidityInnerData.Data)
 
-                humidityInnerData = getsampleusingtime(humInner, startTime, endTime);
                 meanHumidityInner(timeSlot) = mean(humidityInnerData);
 
-            else
+            else % NaN.
 
-                meanHumidityInner(timeSlot) = [];
+                meanHumidityInner(timeSlot) = NaN;
 
             end
+            
+            % Extract data.
+            humidityOuterData = getsampleusingtime(humOuter, startTime, endTime);
+            
+            % Extract features.
+            if ~isempty(humidityOuterData.Data)
 
-
-            if ~isempty(OUTER)
-
-                humidityOuterData = getsampleusingtime(humOuter, startTime, endTime);
                 meanHumidityOuter(timeSlot) = mean(humidityOuterData);  
 
-            else
+            else % NaN.
 
-                meanHumidityOuter(timeSlot) = [];
+                meanHumidityOuter(timeSlot) = NaN;
 
             end
 
@@ -132,7 +139,7 @@ if ~isempty(INNER) || ~isempty(OUTER)
         
         % Write data to txt file.
         alarmLabel = alarmLabels{iStamp};
-        formLabel = formLabels{iStamp};
+        formLabel  = formLabels{iStamp};
 
         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-humidity_features.csv'], 'a');
         fprintf(fid, ['%s, %4.0f, %s, %s, %s, %s, %s,', repmat('%4.2f, ', 1, 9), '%4.2f\n'], ...

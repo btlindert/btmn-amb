@@ -1,92 +1,131 @@
+function analyzePhilipsContact(SUBJECT)
 % AnalyzePhilipsContact analyzes the data from the Philips contact
 % temperature sensor at the finger.
-
+%
 % Path order is as follows:
 % /data1/recordings/btmn/subjects/0000
 %   /temperature/raw
 %       /btmn_0000_temperature_contact_temp.txt
 
-PATH            = '/Volumes/data1/recordings/btmn/subjects/';
+PATH            = '/data1/recordings/btmn/subjects/';
 SUB_PATH        = '/temperature/raw/';
-PATH_TIMESTAMPS = '/Volumes/data1/recordings/btmn/import/150430_behavior_blindert/';
-OUTPUT_FOLDER   = '/Volumes/data2/projects/btmn/analysis/amb/finger-temperature/';
-MISSING         = [5, 7, 10, 17, 18, 21, 29, 39];
-ALL             = 1:44;
-SUBJECTS        = setdiff(ALL, MISSING);
+PATH_TIMESTAMPS = '/data1/recordings/btmn/import/';
+OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/contact-temperature/';
 
-% Select subjects.
-for iSubject = SUBJECTS(1:end)
-   
-    SUBJECT = sprintf('%04.0f', iSubject);    
-    
-    % Path to timestamps.
-    TIMESTAMPS = [PATH_TIMESTAMPS 'btmn_' SUBJECT '_behavior_mobile_timestamps.csv'];
+  
+% Force input to be string.
+SUBJECT = char(SUBJECT);
 
-    % Load all the timestamps for this subject.
-    [id, subjectId, alarmLabels, alarmCounter, formLabels, alarmTimestamps] ...
-        = timestampRead(TIMESTAMPS);
-    
-    % Paths to temperature file.
-    CONTACT = [PATH SUBJECT SUB_PATH 'btmn_' SUBJECT,...
-        '_temperature_contact_temp.txt'];
 
-    if exist(CONTACT, 'file') == 2
+% Recursively find path to timestamps file.
+files = subdir([PATH_TIMESTAMPS, 'btmn_' SUBJECT '_behavior_mobile_timestamps.csv']);
+
+
+% Proceed if there is only 1 file.
+if size(files, 1) == 1
+
+    TIMESTAMPS = files(1).name;
+
+    % Only proceed if the timestamps file exists as a file.
+    if exist(TIMESTAMPS, 'file') ~= 2
+
+        return 
+
+    end
+
+else
+
+    error('No or multiple timestamp files for subject %s', SUBJECT)
+
+end
+
+
+% Load all the timestamps for this subject.
+[~, ~, alarmLabels, alarmCounter, formLabels, alarmTimestamps] ...
+    = timestampRead(TIMESTAMPS);
+
+
+% Set vars to empty.
+CONTACT = '';
+
+
+% CONTACT.
+files = subdir([PATH SUBJECT SUB_PATH '*contact_temp.*']);
+
+if size(files, 1) == 1
+
+    CONTACT     = files(1).name;
+    temperature = philipsContactRead(CONTACT);
+
+end  
+
+
+% If either file exists, proceed.     
+if ~isempty(CONTACT)
+
+    % Open file for writing data.
+    fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_contact-temperature_features.csv'], 'w');
+    fprintf(fid, [repmat('%s, ', 1, 11), '%s\n'],...
+        'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
+        'alarmTime', 'startTime', 'endTime', ...
+        'meanContactTemp60', 'meanContactTemp45', 'meanContactTemp30', 'meanContactTemp15', 'meanContactTemp0');              
+    fclose(fid);
+
+
+    % Loop through all the alarms.
+    for iStamp = 1:numel(alarmTimestamps)
+
+        % Alarm timestamp.
+        alarmTime = alarmTimestamps(iStamp);
+
+        % Declare vars.
+        meanTempContact = zeros(1,5);
         
-        % Open file for writing data.
-        fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_finger-temperature_features.csv'], 'w');
-        fprintf(fid, [repmat('%s, ', 1, 7), '%s\n'],...
-            'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
-            'alarmTime', 'startTime', 'endTime', ...
-            'aveContactTemp');              
-        fclose(fid);
-
+        % Onset and offset of analysis periods.
+        onset  = [-60, -45, -30, -15, 0];
+        offset = [-45, -30, -15, 0, 5];
         
-        % Load temperature data from the contact sensor.
-        temperature = philipsContactRead(CONTACT);
+        
+        % Loop though time slots.
+        for timeSlot = 1:5
 
-        for iStamp = 1:numel(alarmTimestamps)
+            % Get 15 minute periods of data prior to the phone alarms
+            % plus 5 minutes during the task
+            startTime = addtodate(alarmTime, onset(timeSlot), 'minute');
+            endTime   = addtodate(alarmTime, offset(timeSlot), 'minute');
 
-            % Alarm timestamp.
-            alarmTime = alarmTimestamps(iStamp);
-
-            % Get 20 minute period of data around the phone alarms;
-            % Add 5 min; subtract 15 min.
-            startTime = addtodate(alarmTime, -15, 'minute');
-            endTime   = addtodate(alarmTime, 5, 'minute');
-
-            % Extract data around the alarm.
+            % Extract data.
             tempFingerData = getsampleusingtime(temperature, startTime, endTime);
 
-
-            % Remove outliers? e.g. > +-3*SD?
-
-
+            % Extract features.
             if ~isempty(tempFingerData.Data)
 
-                % Calculate the mean temperature.     
-                meanTempContact = mean(tempFingerData);
+                meanTempContact(timeSlot) = mean(tempFingerData);
 
-            else
+            else % NaN.
 
-                meanTempContact = [];
+                meanTempContact(timeSlot) = NaN;
 
-            end
-
-            % Write results to file.
-            alarmLabel = alarmLabels{iStamp};
-            formLabel  = formLabels{iStamp};
-
-            fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_finger-temperature_features.csv'], 'a');
-            fprintf(fid, '%4.0f, %4.0f, %s, %s, %s, %s, %s, %4.2f\n', ...
-                iSubject, alarmCounter(iStamp), alarmLabel, formLabel, ...
-                datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-                datestr(startTime, 'dd-mm-yyyy HH:MM'), ...
-                datestr(endTime, 'dd-mm-yyyy HH:MM'), ...
-                meanTempContact);
-            fclose(fid);
+            end   
 
         end
         
+        
+        % Write results to file.
+        alarmLabel = alarmLabels{iStamp};
+        formLabel  = formLabels{iStamp};
+
+        fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_contact-temperature_features.csv'], 'a');
+        fprintf(fid, ['%s, %4.0f, %s, %s, %s, %s, %s,', repmat('%4.2f, ', 1, 4), '%4.2f\n'], ...
+            SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ...
+            datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
+            datestr(startTime, 'dd-mm-yyyy HH:MM'), ...
+            datestr(endTime, 'dd-mm-yyyy HH:MM'), ...
+            meanTempContact);
+        fclose(fid);
+
     end
+
+end
     
 end

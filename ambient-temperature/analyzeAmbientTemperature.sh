@@ -3,6 +3,6 @@
 #$ -S /bin/sh
 #$ -j y
 #$ -q veryshort.q
-#$ -o /data2/projects/btmn/analysis/amb/ambientTemperature.log
+#$ -o /data2/projects/btmn/analysis/amb/logs/ambientTemperature.log
 #$ -u blindert
 matlab -nodesktop -nosplash -nodisplay -r "try analyzeAmbientTemperature('$1'); catch; end; quit"
