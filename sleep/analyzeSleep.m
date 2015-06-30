@@ -103,12 +103,14 @@ if (exist(WRIST_ACC, 'file') == 2) && (exist(WRIST_XML, 'file') == 2)
     
     % Open file to write data to. 
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT,...
-                 '_sleepScores.txt'], 'w');
+                 '_sleep_features.csv'], 'w');
 
     
     % Put in the sleep variable headers first.
     fprintf(fid, '%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s\n',...
-                  sleepScores{:,1});
+        'csdInBedTime', 'csdLightsOffTime', 'csdWakeTime', 'csdOutOfBedTime', 'timeInBed', 'sleepOnsetTime', 'sleepOnseLatency', ...
+        'finalWakeTime', 'assumedSleepTime', 'snoozeTime1', 'snoozeTime2', 'wakeAfterSleepOnset', 'actualSleepTime', 'sleepEfficiency1', ...
+        'sleepEfficiency2', 'numberOfWakeBouts', 'meanWakeBoutTime', 'numberOfSleepBouts', 'meanSleepBoutTime', 'mobileTime', 'immobileTime');
 
     
     % Load columns from vals and store as rows in txt, both strings and
