@@ -78,7 +78,7 @@ THIGH_XML = [PATH SUBJECT SUB_PATH 'btmn_' SUBJECT '_actigraphy_thigh-left_unise
 
 
 % Create the symlink folder.
-status = system(['mkdir ' SYMLINK_FOLDER]);    
+system(['mkdir ' SYMLINK_FOLDER]);    
 
 
 % Check if each file exists and load chest data.
@@ -87,8 +87,8 @@ if (exist(CHEST_ACC, 'file') == 2) && (exist(CHEST_XML, 'file') == 2)
     accChestPresent = 1;
 
     % Create sym-links.
-    status = system(['ln -s ' CHEST_XML ' ' SYMLINK_FOLDER 'unisens.xml']);
-    status = system(['ln -s ' CHEST_ACC ' ' SYMLINK_FOLDER 'acc.bin']);
+    system(['ln -s ' CHEST_XML ' ' SYMLINK_FOLDER 'unisens.xml']);
+    system(['ln -s ' CHEST_ACC ' ' SYMLINK_FOLDER 'acc.bin']);
 
     % Load data.
     chest = movisensRead([SYMLINK_FOLDER, 'acc.bin']);
@@ -99,8 +99,8 @@ if (exist(CHEST_ACC, 'file') == 2) && (exist(CHEST_XML, 'file') == 2)
     accChest = timeseries(data, chest.Time, 'name', 'SVM');
 
     % Remove sym-links.
-    status = system(['rm ' SYMLINK_FOLDER 'unisens.xml']);
-    status = system(['rm ' SYMLINK_FOLDER 'acc.bin']);
+    system(['rm ' SYMLINK_FOLDER 'unisens.xml']);
+    system(['rm ' SYMLINK_FOLDER 'acc.bin']);
 
 end
 
@@ -111,8 +111,8 @@ if (exist(THIGH_ACC, 'file') == 2) && (exist(THIGH_XML, 'file') == 2)
     accThighPresent = 1;
 
     % Create sym-links.
-    status = system(['ln -s ' THIGH_XML ' ' SYMLINK_FOLDER 'unisens.xml']);
-    status = system(['ln -s ' THIGH_ACC ' ' SYMLINK_FOLDER 'acc.bin']);
+    system(['ln -s ' THIGH_XML ' ' SYMLINK_FOLDER 'unisens.xml']);
+    system(['ln -s ' THIGH_ACC ' ' SYMLINK_FOLDER 'acc.bin']);
 
     % Load data.
     thigh = movisensRead([SYMLINK_FOLDER, 'acc.bin']);
@@ -123,8 +123,8 @@ if (exist(THIGH_ACC, 'file') == 2) && (exist(THIGH_XML, 'file') == 2)
     accThigh = timeseries(data, thigh.Time, 'name', 'SVM');  
 
     % Remove sym-links.
-    status = system(['rm ' SYMLINK_FOLDER 'unisens.xml']);
-    status = system(['rm ' SYMLINK_FOLDER 'acc.bin']);
+    system(['rm ' SYMLINK_FOLDER 'unisens.xml']);
+    system(['rm ' SYMLINK_FOLDER 'acc.bin']);
 
 end
 
@@ -135,8 +135,8 @@ if (exist(WRIST_ACC, 'file') == 2) && (exist(WRIST_XML, 'file') == 2)
     accWristPresent = 1;
 
     % Create sym-links.
-    status = system(['ln -s ' WRIST_XML ' ' SYMLINK_FOLDER 'unisens.xml']);
-    status = system(['ln -s ' WRIST_ACC ' ' SYMLINK_FOLDER 'acc.bin']);
+    system(['ln -s ' WRIST_XML ' ' SYMLINK_FOLDER 'unisens.xml']);
+    system(['ln -s ' WRIST_ACC ' ' SYMLINK_FOLDER 'acc.bin']);
 
     % Load data.
     wrist = movisensRead([SYMLINK_FOLDER, 'acc.bin']);
@@ -147,20 +147,20 @@ if (exist(WRIST_ACC, 'file') == 2) && (exist(WRIST_XML, 'file') == 2)
     accWrist = timeseries(data, wrist.Time, 'name', 'SVM');
 
     % Remove sym-links.
-    status = system(['rm ' SYMLINK_FOLDER 'unisens.xml']);
-    status = system(['rm ' SYMLINK_FOLDER 'acc.bin']);
+    system(['rm ' SYMLINK_FOLDER 'unisens.xml']);
+    system(['rm ' SYMLINK_FOLDER 'acc.bin']);
 
 end 
 
 
-% If one of the files exist, proceed.
+% If one of the files exists, proceed.
 if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
 
     % Open file and write headers.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_activity_features.csv'], 'w');
-    fprintf(fid, [repmat('%s,', 1, 36), '%s\n'],...
+    fprintf(fid, [repmat('%s,', 1, 34), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ... 
-        'alarmTime', 'startTime', 'endTime', ...
+        'alarmTime', ...
         'meanActChest60', 'meanActChest45', 'meanActChest30', 'meanActChest15', 'meanActChest0', ...
         'sumActChest60' , 'sumActChest45' , 'sumActChest30' , 'sumActChest15' , 'sumActChest0' , ...
         'meanActThigh60', 'meanActThigh45', 'meanActThigh30', 'meanActThigh15', 'meanActThigh0', ...
@@ -266,11 +266,9 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
         formLabel  = formLabels{iStamp};
 
         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_activity_features.csv'], 'a');
-        fprintf(fid, ['%s, %4.0f, %s, %s, %s, %s, %s, ', repmat('%8.4f, ', 1, 29) ,'%8.4f\n'], ...
+        fprintf(fid, ['%s, %4.0f, %s, %s, %s, ', repmat('%8.4f, ', 1, 29), '%8.4f\n'], ...
                  SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
                  datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-                 datestr(startTime, 'dd-mm-yyyy HH:MM'), ...
-                 datestr(endTime, 'dd-mm-yyyy HH:MM'), ...
                  meanActChest, sumActChest, ...
                  meanActThigh, sumActThigh, ...
                  meanActWrist, sumActWrist);
@@ -281,6 +279,6 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
 end
 
 % Remove the symlink folder.
-status = system(['rmdir ' SYMLINK_FOLDER]);
+system(['rmdir ' SYMLINK_FOLDER]);
 
 end
