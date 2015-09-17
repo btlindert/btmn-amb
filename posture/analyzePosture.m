@@ -110,16 +110,20 @@ if (exist(THIGH_ACC, 'file') == 2) && (exist(THIGH_XML, 'file') == 2)
     
 end
 
+% Generate labels for header.
+suffix = {'60', '45', '30', '15', '0'};
+prefix = {'posture', 'standing', 'sitting', 'supine', 'right', 'prone', ...
+          'left', 'dynamic'};   
+labels = generateLabels(prefix, suffix);
 
 % Only proceed if both chest and thigh data exist.
 if accChestPresent == 1 && accThighPresent == 1
 
     % Write headers to the output file.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_posture_features.csv'], 'w');
-    fprintf(fid, [repmat('%s, ', 1, 11), '%s\n'],...
+    fprintf(fid, [repmat('%s, ', 1, 5), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ... 
-        'alarmTime', 'startTime', 'endTime', ...
-        'posture60', 'posture45', 'posture30', 'posture15', 'posture0');       
+        'alarmTime', labels);       
     fclose(fid);
 
     % Loop through all the samples.
@@ -132,6 +136,13 @@ if accChestPresent == 1 && accThighPresent == 1
         
         % Declare vars.
         classification = zeros(1,5);
+        standing       = zeros(1,5);
+        sitting        = zeros(1,5);
+        supine         = zeros(1,5);
+        right          = zeros(1,5);
+        prone          = zeros(1,5);
+        left           = zeros(1,5);
+        dynamic        = zeros(1,5);
         
         
         % Onset and offset of analysis periods.
@@ -152,11 +163,20 @@ if accChestPresent == 1 && accThighPresent == 1
 
             if ~isempty(accChestData) && ~isempty(accThighData)
 
-                classification(timeSlot) = posture(accChestData, accThighData, 'off');
+                [classification(timeSlot), standing(timeSlot), sitting(timeSlot), ...
+                    supine(timeSlot), right(timeSlot), prone(timeSlot), ...
+                    left(timeSlot), dynamic(timeSlot)] = posture(accChestData, accThighData, 'off');
 
             else
 
                 classification(timeSlot) = NaN;
+                standing(timeSlot)       = NaN;
+                sitting(timeSlot)        = NaN;
+                supine(timeSlot)         = NaN;
+                right(timeSlot)          = NaN;
+                prone(timeSlot)          = NaN;
+                left(timeSlot)           = NaN;
+                dynamic(timeSlot)        = NaN;
 
             end
 
@@ -166,14 +186,13 @@ if accChestPresent == 1 && accThighPresent == 1
         % Write data to txt file.
         alarmLabel = alarmLabels{iStamp};
         formLabel  = formLabels{iStamp};
-
+        
         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_posture_features.csv'], 'a');
-        fprintf(fid, '%s, %4.0f, %s, %s, %s, %s, %s, %g, %g, %g, %g, %g\n', ...
+        fprintf(fid, ['%s, %4.0f, %s, %s, %s, ', repmat('%g, ', 1, numel(prefix)*numel(suffix)-1), '%g\n'], ...
                  SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
                  datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-                 datestr(startTime, 'dd-mm-yyyy HH:MM'), ...
-                 datestr(endTime, 'dd-mm-yyyy HH:MM'), ...
-                 classification);
+                 classification, standing, sitting, supine, right, prone, ...
+                 left, dynamic);
         fclose(fid);
     
     end
