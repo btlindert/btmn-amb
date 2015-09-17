@@ -1,4 +1,5 @@
-function modeClassification = posture(dataChest, dataThigh, plots)
+function [modeClassification, secStanding, secSitting, secSupine, ...
+    secRight, secProne, secLeft, secDynamic] = posture(dataChest, dataThigh, plots)
 % POSTURE classifies posture based on the inclination of the thigh and
 % chest sensors using a fixed threshold classification algorithm by Lugade
 % 2014 169.
@@ -203,6 +204,19 @@ end
 %% Mode posture.
 % Choose the most frequently occuring posture.
 modeClassification = mode(classification);
+
+
+%% Seconds in each posture.
+% Calculate percentages in R: if timeSlot duration changes, % calc can be
+% easily changed in R.
+secStanding = length(find(classification == 6));
+secSitting  = length(find(classification == 5));
+secSupine   = length(find(classification == 4));
+secRight    = length(find(classification == 3));
+secProne    = length(find(classification == 2));
+secLeft     = length(find(classification == 1));
+secDynamic  = length(find(classification == 0));
+
 
 %% Plots
 if strcmpi(plots, 'on')
