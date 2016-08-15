@@ -4,17 +4,17 @@ function analyzeAmbientLight(SUBJECT)
 % at the coat and sweater.
 
 % Path order is as follows:
-% /data1/recordings/btmn/subjects/0000
+% /someren/recordings/btmn/subjects/0000
 %   /ambient-light/raw
 %       /btmn_0000_ambient-light_coat_processed.txt
 %       /btmn_0000_ambient-light_sweater_processed.txt
 
 % TODO/OPTIONAL: ADD LOADING OF COATHEADER WITH RED/GREEN/BLUE/ACTIVITY DATA
 
-PATH            = '/data1/recordings/btmn/subjects/';
+PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/ambient-light/raw/';
-PATH_TIMESTAMPS = '/data1/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/ambient-light/';
+PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
+OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/ambient-light/';
 
   
 % Force input to be string.
@@ -155,7 +155,7 @@ if ~isempty(INNER) || ~isempty(OUTER)
         offset = [-45, -30, -15, 0, 5];
         
         
-        for timeSlot = 4%1:5
+        for timeSlot = 1:5
         
             % Get 15 minute periods of data prior to the phone alarms
             % plus 5 minutes during the task
