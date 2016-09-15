@@ -1,8 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 #$ -N ambientLight
-#$ -S /bin/sh
+#$ -S /bin/bash
 #$ -j y
 #$ -q veryshort.q
-#$ -o /data2/projects/btmn/analysis/amb/logs/ambientLight.log
-#$ -u blindert
-matlab -nodesktop -nosplash -nodisplay -r "try analyzeAmbientLight('$1'); catch; end; quit"
+#$ -o /someren/projects/btmn/analysis/amb/ambient-light/logs/$JOB_NAME.o$JOB_ID
+#$ -e /someren/projects/btmn/analysis/amb/ambient-light/logs/$JOB_NAME.e$JOB_ID
+#$ -u lindert
+
+# Load environment modules and matlab
+. /etc/profile.d/modules.sh
+module load matlab/r2014a
+
+# Run the matlab job
+matlab -nodesktop -nosplash -nodisplay -r "addpath(genpath('/someren/projects/btmn/scripts/btmn-amb/')); try analyzeAmbientLight('$1'); catch; disp('fail');  end; quit"
