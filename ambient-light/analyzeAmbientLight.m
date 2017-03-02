@@ -1,5 +1,4 @@
 function analyzeAmbientLight(SUBJECT)
-
 % analyzeAmbientLight analyzes the light data from the dimesimeter sensors 
 % at the coat and sweater.
 
@@ -10,6 +9,12 @@ function analyzeAmbientLight(SUBJECT)
 %       /btmn_0000_ambient-light_sweater_processed.txt
 
 % TODO/OPTIONAL: ADD LOADING OF COATHEADER WITH RED/GREEN/BLUE/ACTIVITY DATA
+disp('Running analyzeAmbientLight...');
+
+plots               = 'off';
+validityPlots       = 'off';
+validSelectionPlots = 'off';
+validSelectorsPlots = 'off';
 
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/ambient-light/raw/';
@@ -49,19 +54,34 @@ end
     = timestampRead(TIMESTAMPS);
 
 
-% Set vars to empty or remove.
-OUTER = '';
-INNER = '';  
-
+% Set baseline noise removal threshold on activity.
+% Specify non-activity window
+window       = 15;
+actThreshold = 0.045; %slightly above bin 0.038 due to bin width;
 
 % INNER.
 files = subdir([PATH SUBJECT SUB_PATH '*sweater_processed.*']);
 
 if size(files, 1) == 1
 
+    disp('Inner data present...');
     INNER    = files(1).name;
     [luxInner, claInner, csInner, actInner, xInner, yInner] = ...
         dimesimeterRead(INNER);
+    
+    % Check validity of entire time series. 
+    validInner = validity(actInner, luxInner, window, actThreshold, validityPlots, 'Inner');
+
+else 
+    
+    INNER      = '';
+    validInner = [];
+    luxInner   = [];
+    claInner   = [];
+    csInner    = [];
+    actInner   = [];
+    xInner     = [];
+    yInner     = [];
     
 end 
 
@@ -70,58 +90,39 @@ files = subdir([PATH SUBJECT SUB_PATH '*coat_processed.*']);
 
 if size(files, 1) == 1
 
+    disp('Outer data present...')
     OUTER    = files(1).name;
     [luxOuter, claOuter, csOuter, actOuter, xOuter, yOuter] = ...
         dimesimeterRead(OUTER);
     
-end
+    % Check validity of entire time series. 
+    validOuter = validity(actOuter, luxOuter, window, actThreshold, validityPlots, 'Outer');
 
+else 
+    
+    OUTER      = '';
+    validOuter = [];
+    luxOuter   = [];
+    claOuter   = [];
+    csOuter    = [];
+    actOuter   = [];
+    xOuter     = [];
+    yOuter     = [];
+    
+end
 
 % Generate labels for header.
 prefix = {'startTime', 'endTime'};
-suffix = {'60', '45', '30', '15', '0'};
+suffix = {'Rel', '60', '45', '30', '15', '0'};
 times  = generateLabels(prefix, suffix);
 
-prefix = {'meanLux', 'meanCla', 'meanCs', 'meanAct', 'meanX', 'meanY'};   
+prefix = {'duration', 'meanLux', 'meanThreeParLog', 'meanFourParLog', 'meanCla', 'meanCs', 'meanAct', 'meanX', 'meanY', 'nNan'};   
 labels = generateLabels(prefix, suffix);
 
 % If either file exists, proceed.
 if ~isempty(INNER) || ~isempty(OUTER)
     
-    % Median filter lux and activity data across the entire time series, to
-    % avoid edge flatting in small periods. Remove baseline threshold of
-    % 0.05 from activity.
-    window = 11;
-    actThreshold = 0.04; %slightly above bin 0.038 due to bin width; % or 0.035
-    sdThreshold = 0.002;
-    
-    actInnerMedianFiltered = actInner;
-    actOuterMedianFiltered = actOuter;
-    luxInnerMedianFiltered = luxInner;
-    luxOuterMedianFiltered = luxOuter;
-    
-    actInnerMedianFiltered.Data = medfilt1(actInnerMedianFiltered.Data, window);
-    actInnerMedianFiltered.Data(actInnerMedianFiltered.Data <= actThreshold) = 0;
-    actOuterMedianFiltered.Data = medfilt1(actOuterMedianFiltered.Data, window);
-    actOuterMedianFiltered.Data(actOuterMedianFiltered.Data <= actThreshold) = 0;
-    luxInnerMedianFiltered.Data = medfilt1(luxInnerMedianFiltered.Data, window);
-    luxOuterMedianFiltered.Data = medfilt1(luxOuterMedianFiltered.Data, window);
-    
-    % Calculate SD in window.
-    sdInnerMedianFiltered = actInnerMedianFiltered;
-    sdOuterMedianFiltered = actOuterMedianFiltered;
-    
-    %sdInnerMedianFiltered.Data = nan;
-    %sdOuterMedianFiltered.Data = nan;
-
-    for i = 6:length(sdInnerMedianFiltered) - 5
-        sdInnerMedianFiltered.Data(i) = std(actInnerMedianFiltered.Data(i-5:i+5));
-     
-    end
-
-    for i = 6:length(sdOuterMedianFiltered) - 5
-        sdOuterMedianFiltered.Data(i) = std(actOuterMedianFiltered.Data(i-5:i+5));
-    end
+    disp('Processing...')
     
     % Open file and write headers.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-light_features.csv'], 'w');
@@ -129,33 +130,45 @@ if ~isempty(INNER) || ~isempty(OUTER)
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ... 
         'alarmTime', times, labels);     
     fclose(fid);
-
     
     % Loop through all the alarms.    
     for iStamp = 1:numel(alarmTimestamps)
 
-        
         % Alarm timestamp.
         alarmTime = alarmTimestamps(iStamp);
       
-      
-        % Declare vars.
-        startTimes = cell(1,5);
-        endTimes   = cell(1,5);
-        meanLux    = zeros(1,5);
-        meanCla    = zeros(1,5);
-        meanCs     = zeros(1,5);
-        meanAct    = zeros(1,5);
-        meanX      = zeros(1,5);
-        meanY      = zeros(1,5);
+        % Calculate time relative to previous alarm (etime in seconds, rel in minutes).
+        if iStamp > 1
+            % Previous alarm timestamp.
+            prevTime = alarmTimestamps(iStamp-1);
+            
+            rel = fix(etime(datevec(alarmTime), datevec(prevTime))/60);
+        else
+            % For first alarm, there is no previous alarm...
+            rel = 0;
+        end
 
-        
         % Onset and offset of analysis periods.
-        onset  = [-60, -45, -30, -15, 0];
-        offset = [-45, -30, -15, 0, 5];
-        
-        
-        for timeSlot = 1:5
+        onset  = [-1*rel, -60, -45, -30, -15, 0];
+        offset = [0, -45, -30, -15, 0, 5];
+      
+        nSlots = numel(onset);
+             
+        % Declare vars.
+        duration        = offset-onset; 
+        startTimes      = cell(1,nSlots);
+        endTimes        = cell(1,nSlots);
+        meanLux         = zeros(1,nSlots);
+        meanThreeParLog = zeros(1,nSlots);
+        meanFourParLog  = zeros(1,nSlots);
+        meanCla         = zeros(1,nSlots);
+        meanCs          = zeros(1,nSlots);
+        meanAct         = zeros(1,nSlots);
+        meanX           = zeros(1,nSlots);
+        meanY           = zeros(1,nSlots);
+        nNan            = zeros(1,nSlots);
+
+        for timeSlot = 1:nSlots
         
             % Get 15 minute periods of data prior to the phone alarms
             % plus 5 minutes during the task
@@ -167,189 +180,125 @@ if ~isempty(INNER) || ~isempty(OUTER)
 
             % Not all files were collected so we test for the existence of the file
             % first.
-            if ~isempty(INNER) && ~isempty(OUTER)
+            if ~isempty(INNER) || ~isempty(OUTER)
 
-                % Select median filtered lux, activity and SD.
-                luxInnerMed = getsampleusingtime(luxInnerMedianFiltered, startTime, endTime);
-                luxOuterMed = getsampleusingtime(luxOuterMedianFiltered, startTime, endTime);
-                actInnerMed = getsampleusingtime(actInnerMedianFiltered, startTime, endTime);
-                actOuterMed = getsampleusingtime(actOuterMedianFiltered, startTime, endTime);
-                sdInnerMed = getsampleusingtime(sdInnerMedianFiltered, startTime, endTime);
-                sdOuterMed = getsampleusingtime(sdOuterMedianFiltered, startTime, endTime);            
-                                                                
-                nI = length(luxInnerMed.Data);
-                nO = length(luxOuterMed.Data);
-                N = max([nI, nO]);
+                [selInner, selOuter, selMax] = validSelectors(validInner, validOuter,...
+                    startTime, endTime, validSelectorsPlots);
                 
-                % Paste all data to NaN matrix, in case data is not available
-                % for equal duration.
-                luxMed = nan(N, 2);
-                luxMed(1:nI, 1) = luxInnerMed.Data;
-                luxMed(1:nO, 2) = luxOuterMed.Data;
+                % Select the actual data samples.
+                luxSelected = validSelection(luxInner, luxOuter, startTime, endTime,...
+                    selInner, selOuter, selMax, validSelectionPlots);
                 
-                actMed = nan(N, 2);
-                actMed(1:nI, 1) = actInnerMed.Data;
-                actMed(1:nO, 2) = actOuterMed.Data;
+                claSelected = validSelection(claInner, claOuter, startTime, endTime,...
+                    selInner, selOuter, selMax, 'off');
                 
-                sdMed = nan(N, 2);
-                sdMed(1:nI, 1) = sdInnerMed.Data;
-                sdMed(1:nO, 2) = sdOuterMed.Data;
+                csSelected = validSelection(csInner, csOuter, startTime, endTime,...
+                    selInner, selOuter, selMax, 'off');
                 
-                % Find indices that correspond with selection criteria. For
-                % this we only use the median filtered lux, activity and SD.
-                
-                % All lux = NaN, unless...
-                % If actOuter > 0 AND luxOuter > 0, 
-                % pick sensor with max lux.
-                sel1 = find(actMed(:,2) > 0 & luxMed(:,2) >= 0);
-                
-                % If actOuter > 0 AND luxOuter > 0 AND
-                % actInner > 0 AND LuxInner > 0, 
-                % pick Outer sensor (luxOuter).
-                sel2 = find(actMed(:,2) > 0 & luxMed(:,2) >= 0 ...
-                    & actMed(:,1) > 0 & luxMed(:,1) >= 0 );
-                
-                % If actOuter <= 0 AND actInner > 0, pick Inner sensor (luxInner). 
-                sel3 = find(actMed(:,2) <= 0 & actMed(:,1) > 0);
-               
-                
-                % Paste all other variables to NaN matrices.
-                luxInnerData = getsampleusingtime(luxInner, startTime, endTime);
-                claInnerData = getsampleusingtime(claInner, startTime, endTime);
-                csInnerData  = getsampleusingtime(csInner, startTime, endTime);
-                actInnerData = getsampleusingtime(actInner, startTime, endTime);
-                xInnerData   = getsampleusingtime(xInner, startTime, endTime);
-                yInnerData   = getsampleusingtime(yInner, startTime, endTime);
-                  
-                luxOuterData = getsampleusingtime(luxOuter, startTime, endTime);
-                claOuterData = getsampleusingtime(claOuter, startTime, endTime);
-                csOuterData  = getsampleusingtime(csOuter, startTime, endTime);
-                actOuterData = getsampleusingtime(actOuter, startTime, endTime);
-                xOuterData   = getsampleusingtime(xOuter, startTime, endTime);
-                yOuterData   = getsampleusingtime(yOuter, startTime, endTime);
-                
-                lux = nan(N, 2);
-                lux(1:nI, 1) = luxInnerData.Data;
-                lux(1:nO, 2) = luxOuterData.Data;
-                
-                cla = nan(N, 2);
-                cla(1:nI, 1) = claInnerData.Data;
-                cla(1:nO, 2) = claOuterData.Data;
-                
-                cs = nan(N, 2);
-                cs(1:nI, 1) = csInnerData.Data;
-                cs(1:nO, 2) = csOuterData.Data;
-                
-                act = nan(N, 2);
-                act(1:nI, 1) = actInnerData.Data;
-                act(1:nO, 2) = actOuterData.Data;
+                actSelected = validSelection(actInner, actOuter, startTime, endTime,...
+                    selInner, selOuter, selMax, 'off');
                                 
-                x = nan(N, 2);
-                x(1:nI, 1) = xInnerData.Data;
-                x(1:nO, 2) = xOuterData.Data;
+                xSelected = validSelection(xInner, xOuter, startTime, endTime,...
+                    selInner, selOuter, selMax, 'off');
                                 
-                y = nan(N, 2);
-                y(1:nI, 1) = yInnerData.Data;
-                y(1:nO, 2) = yOuterData.Data;
-                
-                % Find which column contains the max value and select the data.
-                % Apply sel1, before sel2, before sel3.
-                [~, maxCol] = max(luxMed(sel1, :), [], 2); 
-                
-                
-                % Average log10(lux), use lux instead of median filtered lux.
-                luxSelected = nan(N, 1);
-                luxSelected(sel1) = max(lux(sel1, maxCol), [], 2);
-                luxSelected(sel2) = lux(sel2, 2);
-                luxSelected(sel3) = lux(sel3, 1);
+                ySelected = validSelection(yInner, yOuter, startTime, endTime,...
+                    selInner, selOuter, selMax, 'off');
 
+                % Log10.
                 meanLux(timeSlot) = nanmean(log10(luxSelected + 1));
                 
-                % Average circadian lux.
-                claSelected = nan(N, 1);
-                claSelected(sel1) = max(cla(sel1, maxCol), [], 2);
-                claSelected(sel2) = cla(sel2, 2);
-                claSelected(sel3) = cla(sel3, 1);
+                % 3-parameter logistic
+                a = -0.161;
+                b = 88.0;
+                c = 1.0;
+                threeParLog = @(x) ((a-c)./(1 + (x./b))) + c;
+                meanThreeParLog(timeSlot) = nanmean(threeParLog(luxSelected));
                 
+                % 4-parameter logistic
+                a = -0.0156;
+                b = 106;
+                c = 0.936;
+                d = 3.55;
+                fourParLog = @(x) ((a-c)./(1 + (x./b).^d)) + c;
+                meanFourParLog(timeSlot) = nanmean(fourParLog(luxSelected)); 
+                
+                % Circadian stimulus
                 meanCla(timeSlot) = nanmean(claSelected);
-
-                % Average circadian stimulus.
-                csSelected = nan(N, 1);
-                csSelected(sel1) = max(cs(sel1, maxCol), [], 2);
-                csSelected(sel2) = cs(sel2, 2);
-                csSelected(sel3) = cs(sel3, 1);
                 
-                meanCs(timeSlot) = nanmean(csSelected);
-
-                % Average activity: use median filtered activity!
-                actSelected = nan(N, 1);
-                actSelected(sel1) = max(act(sel1, maxCol), [], 2);
-                actSelected(sel2) = act(sel2, 2);
-                actSelected(sel3) = act(sel3, 1);
+                % Circadian lux 
+                meanCs(timeSlot)  = nanmean(csSelected);
                 
-                meanAct(timeSlot) = nanmean(actSelected);      
-
-                % Average x.     
-                xSelected = nan(N, 1);
-                xSelected(sel1) = max(x(sel1, maxCol), [], 2);
-                xSelected(sel2) = x(sel2, 2);
-                xSelected(sel3) = x(sel3, 1);
+                % Activity
+                actSelected       = actSelected - actThreshold;
+                actSelected(actSelected < 0) = 0;
+                meanAct(timeSlot) = nanmean(actSelected);
                 
-                meanX(timeSlot) = nanmean(xSelected);
+                % x
+                meanX(timeSlot)   = nanmean(xSelected); 
                 
-                % Average y. 
-                ySelected = nan(N, 1);
-                ySelected(sel1) = max(y(sel1, maxCol), [], 2);
-                ySelected(sel2) = y(sel2, 2);
-                ySelected(sel3) = y(sel3, 1);
+                % y
+                meanY(timeSlot)   = nanmean(ySelected);
                 
-                meanY(timeSlot) = nanmean(ySelected);
+                % Number of NaNs
+                % NANs is equal for all variables, so let's just pick lux.
+                nNan(timeSlot)    = sum(isnan(luxSelected));
+                
                 
             else % NaN.
                 
                 meanLux(timeSlot) = NaN;
+                meanThreeParLog(timeslot) = NaN;
+                meanFourParLog(timeslot) = NaN;
                 meanCla(timeSlot) = NaN;
                 meanCs(timeSlot)  = NaN;
                 meanAct(timeSlot) = NaN;
                 meanX(timeSlot)   = NaN;
                 meanY(timeSlot)   = NaN;
+                nNan(timeSlot)    = NaN;
                 
             end
-   
+              
+            if strcmpi(plots, 'on')
+                
+                figure()
+                subplot(4,1,1);
+                bar(luxSelected)
+                %bar(luxInnerMed.data); hold on; bar(luxOuterMed.data, 'r'); hold off;
+                title('lux'); axis tight
+                subplot(4,1,2); 
+                bar(act)
+                %bar(actInnerMed.data); hold on; bar(actOuterMed.data, 'r'); hold off;
+                title('act'); axis tight
+                subplot(4,1,3);
+                %bar(sd)
+                bar(sdInnerMed.data); hold on; bar(sdOuterMed.data, 'r'); hold off;
+                title('sd'); ylim([0, 0.004]); axis tight
+                subplot(4,1,4);    
+                bar(luxSelected);        
+                title('lux selected'); axis tight
+                
+            end
+        
         end
         
-         figure()
-        subplot(4,1,1);
-        plot(luxInnerMed); hold on; plot(luxOuterMed, 'r'); hold off;
-        title('lux'); axis tight
-        subplot(4,1,2); 
-        plot(actInnerMed); hold on; plot(actOuterMed, 'r'); hold off;
-        title('act'); axis tight
-        subplot(4,1,3);
-        plot(sdInnerMed); hold on; plot(sdOuterMed, 'r'); hold off;
-        title('sd'); ylim([0, 0.004]); axis tight
-        subplot(4,1,4);
-        plot(luxSelected);        
-        title('lux selected'); axis tight
-        
-        fprintf('figure %f, mean = %f\n', iStamp, nanmean(luxSelected));
-        
         % Write data to txt file.
-%         alarmLabel = alarmLabels{iStamp};
-%         formLabel = formLabels{iStamp};
-% 
-%         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-light_features.csv'], 'a');
-%         fprintf(fid, ['%s, %4.0f, ', repmat('%s, ', 1, 5), ...
-%             repmat('%8.4f, ', 1, numel(prefix)*numel(suffix)-1), '%8.4f\n'], ...
-%             SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
-%             datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-%             sprintf([repmat('%s, ', 1, 4), '%s'], startTimes{:}), ...
-%             sprintf([repmat('%s, ', 1, 4), '%s'], endTimes{:}), ...
-%             meanLux, meanCla, meanCs, meanAct, meanX, meanY);
-%         fclose(fid);
+        alarmLabel = alarmLabels{iStamp};
+        formLabel  = formLabels{iStamp};
+
+        fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-light_features.csv'], 'a');
+        fprintf(fid, ['%s, %4.0f, ', repmat('%s, ', 1, 5), ...
+            repmat('%8.4f, ', 1, numel(prefix)*numel(suffix)-1), '%8.4f\n'], ...
+            SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
+            datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
+            sprintf([repmat('%s, ', 1, 5), '%s'], startTimes{:}), ...
+            sprintf([repmat('%s, ', 1, 5), '%s'], endTimes{:}), ... 
+            duration, meanLux, meanThreeParLog, meanFourParLog, meanCla, meanCs, meanAct, meanX, meanY, nNan);
+        fclose(fid);
         
     end
     
 end
     
+disp('Analysis completed without errors...');
+
 end
