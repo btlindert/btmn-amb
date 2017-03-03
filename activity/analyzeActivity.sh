@@ -1,9 +1,9 @@
 #!/bin/bash
-#$ -N ambientTemperature
+#$ -N activity
 #$ -S /bin/bash
 #$ -q regular.q
-#$ -o /someren/projects/btmn/analysis/amb/ambient-temperature/logs/$JOB_NAME_$JOB_ID.o
-#$ -e /someren/projects/btmn/analysis/amb/ambient-temperature/logs/$JOB_NAME_$JOB_ID.e
+#$ -o /someren/projects/btmn/analysis/amb/activity/logs/$JOB_NAME_$JOB_ID.o
+#$ -e /someren/projects/btmn/analysis/amb/activity/logs/$JOB_NAME_$JOB_ID.e
 #$ -j y
 #$ -u lindert
 
@@ -20,7 +20,7 @@ module load matlab/r2014a
 
 # Run the matlab job
 /bin/echo Starting matlab...
-matlab -nodesktop -nosplash -nodisplay -r "addpath(genpath('/someren/projects/btmn/scripts/btmn-amb/')); analyzeAmbientTemperature('$1'); quit"
+matlab -nodesktop -nosplash -nodisplay -r "addpath(genpath('/someren/projects/btmn/scripts/btmn-amb/')); analyzeActivity('$1'); quit"
 
 # End
 /bin/echo End time: `date`
