@@ -12,10 +12,10 @@ function analyzeActivity(SUBJECT)
 %       /btmn_0000_actigraphy_wrist-left_acc.bin
 %       /btmn_0000_actigraphy_wrist-left_unisens.xml
 
-PATH            = '/data1/recordings/btmn/subjects/';
+PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/actigraphy/raw/';
-PATH_TIMESTAMPS = '/data1/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/activity/';
+PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
+OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/activity/';
 
 
 % Force input to be string.
@@ -161,11 +161,11 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
     fprintf(fid, [repmat('%s,', 1, 34), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ... 
         'alarmTime', ...
-        'meanActChest60', 'meanActChest45', 'meanActChest30', 'meanActChest15', 'meanActChest0', ...
+        'medActChest60', 'medActChest45', 'medActChest30', 'medActChest15', 'medActChest0', ...
         'sumActChest60' , 'sumActChest45' , 'sumActChest30' , 'sumActChest15' , 'sumActChest0' , ...
-        'meanActThigh60', 'meanActThigh45', 'meanActThigh30', 'meanActThigh15', 'meanActThigh0', ...
+        'medActThigh60', 'medActThigh45', 'medActThigh30', 'medActThigh15', 'medActThigh0', ...
         'sumActThigh60' , 'sumActThigh45' , 'sumActThigh30' , 'sumActThigh15' , 'sumActThigh0' , ...
-        'meanActWrist60', 'meanActWrist45', 'meanActWrist30', 'meanActWrist15', 'meanActWrist0', ...
+        'medActWrist60', 'medActWrist45', 'medActWrist30', 'medActWrist15', 'medActWrist0', ...
         'sumActWrist60' , 'sumActWrist45' , 'sumActWrist30' , 'sumActWrist15' , 'sumActWrist0'); 
     fclose(fid);
     
@@ -177,11 +177,11 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
         alarmTime = alarmTimestamps(iStamp);
 
         % Declare vars.
-        meanActChest = zeros(1,5);
+        medActChest = zeros(1,5);
         sumActChest  = zeros(1,5);
-        meanActThigh = zeros(1,5);
+        medActThigh = zeros(1,5);
         sumActThigh  = zeros(1,5);
-        meanActWrist = zeros(1,5);
+        medActWrist = zeros(1,5);
         sumActWrist  = zeros(1,5);
 
         % Onset and offset of analysis periods.
@@ -205,13 +205,13 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
                 if ~isempty(actChestData.Data)
 
                     % Features.
-                    meanActChest(timeSlot) = mean(actChestData);
-                    sumActChest(timeSlot)  = sum(actChestData);
+                    medActChest(timeSlot) = nanmedian(actChestData);
+                    sumActChest(timeSlot) = sum(actChestData);
                     
                 else % NaN
 
-                    meanActChest(timeSlot) = NaN;
-                    sumActChest(timeSlot)  = NaN;                  
+                    medActChest(timeSlot) = NaN;
+                    sumActChest(timeSlot) = NaN;                  
                     
                 end
 
@@ -226,13 +226,13 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
                 if ~isempty(actThighData.Data)
 
                     % Features. 
-                    meanActThigh(timeSlot) = mean(actThighData);
-                    sumActThigh(timeSlot)  = sum(actThighData);
+                    medActThigh(timeSlot) = nanmedian(actThighData);
+                    sumActThigh(timeSlot) = sum(actThighData);
 
                 else % NaN
                     
-                    meanActThigh(timeSlot) = NaN;
-                    sumActThigh(timeSlot)  = NaN;
+                    medActThigh(timeSlot) = NaN;
+                    sumActThigh(timeSlot) = NaN;
                     
                 end
 
@@ -247,13 +247,13 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
                 if ~isempty(actWristData.Data)
 
                     % Features.
-                    meanActWrist(timeSlot) = mean(actWristData);
-                    sumActWrist(timeSlot)  = sum(actWristData);
+                    medActWrist(timeSlot) = nanmedian(actWristData);
+                    sumActWrist(timeSlot) = sum(actWristData);
 
                 else % NaN
                     
-                    meanActWrist(timeSlot) = NaN;
-                    sumActWrist(timeSlot)  = NaN;
+                    medActWrist(timeSlot) = NaN;
+                    sumActWrist(timeSlot) = NaN;
                    
                 end
 
@@ -269,9 +269,9 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
         fprintf(fid, ['%s, %4.0f, %s, %s, %s, ', repmat('%8.4f, ', 1, 29), '%8.4f\n'], ...
                  SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
                  datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-                 meanActChest, sumActChest, ...
-                 meanActThigh, sumActThigh, ...
-                 meanActWrist, sumActWrist);
+                 medActChest, sumActChest, ...
+                 medActThigh, sumActThigh, ...
+                 medActWrist, sumActWrist);
         fclose(fid);
 
     end
