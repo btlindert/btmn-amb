@@ -10,14 +10,13 @@ function analyzeSleep(SUBJECT)
 
 
 % Add path to actant scripts.
-addpath(genpath('/data2/projects/btmn/scripts/actant/')); 
-
+addpath(genpath('/someren/projects/btmn/scripts/actant/')); 
 
 % Define folders.
-PATH            = '/data1/recordings/btmn/subjects/';
+PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/actigraphy/raw/';
-PATH_CSD        = '/data2/projects/btmn/analysis/amb/sleep/csd/';
-OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/sleep/';
+PATH_CSD        = '/someren/projects/btmn/analysis/amb/sleep/csd/';
+OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/sleep/';
 
 
 % Force input to be string.
