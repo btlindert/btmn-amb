@@ -8,10 +8,10 @@ function analyzeAmbientHumidity(SUBJECT)
 %       /btmn_0000_humidity_coat.txt/.csv
 %       /btmn_0000_humidity_sweater.txt/.csv
 
-PATH            = '/data1/recordings/btmn/subjects/';
+PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/humidity/raw/';
-PATH_TIMESTAMPS = '/data1/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/ambient-humidity/';
+PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
+OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/ambient-humidity/';
 
 
 % Force input to be string.
@@ -77,11 +77,11 @@ if ~isempty(INNER) || ~isempty(OUTER)
 
     % Open file and write headers.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-humidity_features.csv'], 'w');
-    fprintf(fid, [repmat('%s, ', 1, 16), '%s\n'],...
+    fprintf(fid, [repmat('%s, ', 1, 14), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
-        'alarmTime', 'startTime', 'endTime', ...
-        'meanHumidityInner60', 'meanHumidityInner45', 'meanHumidityInner30', 'meanHumidityInner15', 'meanHumidityInner0', ...
-        'meanHumidityOuter60', 'meanHumidityOuter45', 'meanHumidityOuter30', 'meanHumidityOuter15', 'meanHumidityOuter0');              
+        'alarmTime', ...
+        'medHumidityInner60', 'medHumidityInner45', 'medHumidityInner30', 'medHumidityInner15', 'medHumidityInner0', ...
+        'medHumidityOuter60', 'medHumidityOuter45', 'medHumidityOuter30', 'medHumidityOuter15', 'medHumidityOuter0');              
     fclose(fid);
 
     % Loop through all alarms.
@@ -91,8 +91,8 @@ if ~isempty(INNER) || ~isempty(OUTER)
         alarmTime = alarmTimestamps(iStamp);
 
         % Declare vars.
-        meanHumidityInner = zeros(1,5);
-        meanHumidityOuter = zeros(1,5);  
+        medHumidityInner = zeros(1,5);
+        medHumidityOuter = zeros(1,5);  
         
         % Onset and offset of analysis periods.
         onset  = [-60, -45, -30, -15, 0];
@@ -112,11 +112,11 @@ if ~isempty(INNER) || ~isempty(OUTER)
             % Extract features.
             if ~isempty(humidityInnerData.Data)
 
-                meanHumidityInner(timeSlot) = mean(humidityInnerData);
+                medHumidityInner(timeSlot) = nanmedian(humidityInnerData);
 
             else % NaN.
 
-                meanHumidityInner(timeSlot) = NaN;
+                medHumidityInner(timeSlot) = NaN;
 
             end
             
@@ -126,11 +126,11 @@ if ~isempty(INNER) || ~isempty(OUTER)
             % Extract features.
             if ~isempty(humidityOuterData.Data)
 
-                meanHumidityOuter(timeSlot) = mean(humidityOuterData);  
+                medHumidityOuter(timeSlot) = nanmedian(humidityOuterData);  
 
             else % NaN.
 
-                meanHumidityOuter(timeSlot) = NaN;
+                medHumidityOuter(timeSlot) = NaN;
 
             end
 
@@ -142,12 +142,10 @@ if ~isempty(INNER) || ~isempty(OUTER)
         formLabel  = formLabels{iStamp};
 
         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-humidity_features.csv'], 'a');
-        fprintf(fid, ['%s, %4.0f, %s, %s, %s, %s, %s,', repmat('%4.2f, ', 1, 9), '%4.2f\n'], ...
+        fprintf(fid, ['%s, %4.0f, %s, %s, %s, ', repmat('%4.2f, ', 1, 9), '%4.2f\n'], ...
                  SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ...
                  datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-                 datestr(startTime, 'dd-mm-yyyy HH:MM'), ...
-                 datestr(endTime, 'dd-mm-yyyy HH:MM'), ...
-                 meanHumidityInner, meanHumidityOuter);
+                 medHumidityInner, medHumidityOuter);
         fclose(fid);
 
     end
