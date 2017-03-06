@@ -8,10 +8,10 @@ function analyzeAmbientTemperature(SUBJECT)
 %       /btmn_0000_temperature_coat.txt/.csv
 %       /btmn_0000_temperature_sweater.txt/.csv
 
-PATH            = '/data1/recordings/btmn/subjects/';
+PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/temperature/raw/';
-PATH_TIMESTAMPS = '/data1/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/ambient-temperature/';
+PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
+OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/ambient-temperature/';
 
 % Force input to be string.
 SUBJECT = char(SUBJECT);
@@ -74,13 +74,16 @@ end
 % If either file exists, proceed.     
 if ~isempty(INNER) || ~isempty(OUTER)
 
-     % Open file and write headers.
+    % Generate labels for header.
+    prefix = {'medTemperatureInner', 'medTemperatureOuter'};
+    suffix = {'rel', '15', '0'};
+    labels  = generateLabels(prefix, suffix);
+    
+    % Open file and write headers.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-temperature_features.csv'], 'w');
-    fprintf(fid, [repmat('%s, ', 1, 16), '%s\n'],...
+    fprintf(fid, [repmat('%s, ', 1, 5), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
-        'alarmTime', 'startTime', 'endTime', ...
-        'meanTemperatureInner60', 'meanTemperatureInner45', 'meanTemperatureInner30', 'meanTemperatureInner15', 'meanTemperatureInner0', ...
-        'meanTemperatureOuter60', 'meanTemperatureOuter45', 'meanTemperatureOuter30', 'meanTemperatureOuter15', 'meanTemperatureOuter0');              
+        'alarmTime', labels);              
     fclose(fid);
 
     for iStamp = 1:numel(alarmTimestamps)
@@ -88,33 +91,49 @@ if ~isempty(INNER) || ~isempty(OUTER)
         % Alarm timestamp.
         alarmTime = alarmTimestamps(iStamp);
 
-        % Declare vars.
-        meanTemperatureInner = zeros(1,5);
-        meanTemperatureOuter = zeros(1,5);  
-        
+         % Calculate time relative to previous alarm (etime in seconds, rel in minutes).
+        if iStamp > 1
+            % Previous alarm timestamp.
+            prevTime = alarmTimestamps(iStamp-1);
+            
+            rel = fix(etime(datevec(alarmTime), datevec(prevTime))/60);
+        else
+            % For first alarm, there is no previous alarm...
+            rel = 0;
+        end
+  
         % Onset and offset of analysis periods.
-        onset  = [-60, -45, -30, -15, 0];
-        offset = [-45, -30, -15, 0, 5];
+        onset  = [-1*rel, -15, 0];
+        offset = [0, 0, 5];
         
+        nSlots = numel(onset);
         
-        for timeSlot = 1:5
+        % Declare vars.
+        medTemperatureInner = zeros(1,nSlots);
+        medTemperatureOuter = zeros(1,nSlots);  
+          
+        for timeSlot = 1:nSlots
             
             % Get 20 minute period of data around the phone alarms;
             % Add 5 min; subtract 15 min.
             startTime = addtodate(alarmTime, onset(timeSlot), 'minute');
             endTime   = addtodate(alarmTime, offset(timeSlot), 'minute');
 
+            startTimes{timeSlot} = datestr(startTime, 'dd-mm-yyyy HH:MM');
+            endTimes{timeSlot}   = datestr(endTime, 'dd-mm-yyyy HH:MM');
+            
             % Extract data.
             temperatureInnerData = getsampleusingtime(temperatureInner, startTime, endTime);
  
             % Extract features,
             if ~isempty(temperatureInnerData.Data)
                 
-                 meanTemperatureInner(timeSlot) = mean(temperatureInnerData);
+                [~,~,~,medTemperatureInner(timeSlot),~,~,~,~] = ...
+                    getDescriptivesData(temperatureInnerData); 
                 
             else % NaN.
                 
-                meanTemperatureInner(timeSlot) = NaN;
+                medTemperatureInner(timeSlot) = NaN;
                 
             end
 
@@ -124,11 +143,12 @@ if ~isempty(INNER) || ~isempty(OUTER)
             % Extract features.
             if ~isempty(temperatureOuterData.Data)
                 
-                meanTemperatureOuter(timeSlot) = mean(temperatureOuterData);  
+                [~,~,~,medTemperatureOuter(timeSlot),~,~,~,~] = ...
+                    getDescriptivesData(temperatureOuterData); 
                 
             else % NaN.
                 
-                meanTemperatureOuter(timeSlot) = NaN;
+                medTemperatureOuter(timeSlot) = NaN;
                 
             end
 
@@ -139,12 +159,13 @@ if ~isempty(INNER) || ~isempty(OUTER)
         formLabel = formLabels{iStamp};
 
         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-temperature_features.csv'], 'a');
-        fprintf(fid, ['%s, %4.0f, %s, %s, %s, %s, %s,', repmat('%4.2f, ', 1, 9), '%4.2f\n'], ...
-                 SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ...
-                 datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-                 datestr(startTime, 'dd-mm-yyyy HH:MM'), ...
-                 datestr(endTime, 'dd-mm-yyyy HH:MM'), ...
-                 meanTemperatureInner, meanTemperatureOuter);
+        fprintf(fid, ['%s, %4.0f, ', repmat('%s, ', 1, 5), ...
+            repmat('%8.4f, ', 1, numel(prefix)*numel(suffix)-1), '%8.4f\n'], ...
+            SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ...
+            datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], startTimes{:}), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], endTimes{:}), ... 
+            medTemperatureInner, medTemperatureOuter);
         fclose(fid);
         
     end

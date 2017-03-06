@@ -75,13 +75,16 @@ end
 % If either file exists, proceed.     
 if ~isempty(INNER) || ~isempty(OUTER)
 
+    % Generate labels for header.
+    prefix = {'medHumidityInner', 'medHumidityOuter'};
+    suffix = {'rel', '15', '0'};
+    labels  = generateLabels(prefix, suffix);
+    
     % Open file and write headers.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-humidity_features.csv'], 'w');
-    fprintf(fid, [repmat('%s, ', 1, 14), '%s\n'],...
+    fprintf(fid, [repmat('%s, ', 1, 5), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
-        'alarmTime', ...
-        'medHumidityInner60', 'medHumidityInner45', 'medHumidityInner30', 'medHumidityInner15', 'medHumidityInner0', ...
-        'medHumidityOuter60', 'medHumidityOuter45', 'medHumidityOuter30', 'medHumidityOuter15', 'medHumidityOuter0');              
+        'alarmTime', labels);              
     fclose(fid);
 
     % Loop through all alarms.
@@ -90,29 +93,45 @@ if ~isempty(INNER) || ~isempty(OUTER)
         % Alarm timestamp.
         alarmTime = alarmTimestamps(iStamp);
 
-        % Declare vars.
-        medHumidityInner = zeros(1,5);
-        medHumidityOuter = zeros(1,5);  
+        % Calculate time relative to previous alarm (etime in seconds, rel in minutes).
+        if iStamp > 1
+            % Previous alarm timestamp.
+            prevTime = alarmTimestamps(iStamp-1);
+            
+            rel = fix(etime(datevec(alarmTime), datevec(prevTime))/60);
+        else
+            % For first alarm, there is no previous alarm...
+            rel = 0;
+        end
         
         % Onset and offset of analysis periods.
-        onset  = [-60, -45, -30, -15, 0];
-        offset = [-45, -30, -15, 0, 5];
+        onset  = [-1*rel, -15, 0];
+        offset = [0, 0, 5];
         
+        nSlots = numel(onset);
         
-        for timeSlot = 1:5
+        % Declare vars.
+        medHumidityInner = zeros(1,nSlots);
+        medHumidityOuter = zeros(1,nSlots);  
+        
+        for timeSlot = 1:nSlots
             
             % Get 15 minute periods of data prior to the phone alarms
             % plus 5 minutes during the task
             startTime = addtodate(alarmTime, onset(timeSlot), 'minute');
             endTime   = addtodate(alarmTime, offset(timeSlot), 'minute');
 
+            startTimes{timeSlot} = datestr(startTime, 'dd-mm-yyyy HH:MM');
+            endTimes{timeSlot}   = datestr(endTime, 'dd-mm-yyyy HH:MM');
+            
             % Extract data.
             humidityInnerData = getsampleusingtime(humInner, startTime, endTime);
             
             % Extract features.
             if ~isempty(humidityInnerData.Data)
 
-                medHumidityInner(timeSlot) = nanmedian(humidityInnerData);
+                [~,~,~,medHumidityInner(timeSlot),~,~,~,~] = ...
+                    getDescriptivesData(humidityInnerData);
 
             else % NaN.
 
@@ -126,7 +145,8 @@ if ~isempty(INNER) || ~isempty(OUTER)
             % Extract features.
             if ~isempty(humidityOuterData.Data)
 
-                medHumidityOuter(timeSlot) = nanmedian(humidityOuterData);  
+                [~,~,~,medHumidityOuter(timeSlot),~,~,~,~] = ...
+                    getDescriptivesData(humidityOuterData);  
 
             else % NaN.
 
@@ -142,10 +162,13 @@ if ~isempty(INNER) || ~isempty(OUTER)
         formLabel  = formLabels{iStamp};
 
         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-humidity_features.csv'], 'a');
-        fprintf(fid, ['%s, %4.0f, %s, %s, %s, ', repmat('%4.2f, ', 1, 9), '%4.2f\n'], ...
-                 SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ...
-                 datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-                 medHumidityInner, medHumidityOuter);
+        fprintf(fid, ['%s, %4.0f, ', repmat('%s, ', 1, 5), ... 
+            repmat('%8.4f, ', 1, numel(prefix)*numel(suffix)-1), '%8.4f\n'], ...
+            SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ...
+            datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], startTimes{:}), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], endTimes{:}), ... 
+            medHumidityInner, medHumidityOuter);
         fclose(fid);
 
     end

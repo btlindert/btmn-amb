@@ -156,17 +156,16 @@ end
 % If one of the files exists, proceed.
 if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
 
+    % Generate labels for header.
+    prefix = {'medActChest', 'sumActChest', 'medActThigh', 'sumActThigh', 'medActWrist', 'sumActWrist'};
+    suffix = {'rel', '15', '0'};
+    labels  = generateLabels(prefix, suffix);
+    
     % Open file and write headers.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_activity_features.csv'], 'w');
-    fprintf(fid, [repmat('%s,', 1, 34), '%s\n'],...
+    fprintf(fid, [repmat('%s,', 1, 5), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ... 
-        'alarmTime', ...
-        'medActChest60', 'medActChest45', 'medActChest30', 'medActChest15', 'medActChest0', ...
-        'sumActChest60' , 'sumActChest45' , 'sumActChest30' , 'sumActChest15' , 'sumActChest0' , ...
-        'medActThigh60', 'medActThigh45', 'medActThigh30', 'medActThigh15', 'medActThigh0', ...
-        'sumActThigh60' , 'sumActThigh45' , 'sumActThigh30' , 'sumActThigh15' , 'sumActThigh0' , ...
-        'medActWrist60', 'medActWrist45', 'medActWrist30', 'medActWrist15', 'medActWrist0', ...
-        'sumActWrist60' , 'sumActWrist45' , 'sumActWrist30' , 'sumActWrist15' , 'sumActWrist0'); 
+        'alarmTime', labels); 
     fclose(fid);
     
     
@@ -176,24 +175,40 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
         % Alarm timeStamp.
         alarmTime = alarmTimestamps(iStamp);
 
-        % Declare vars.
-        medActChest = zeros(1,5);
-        sumActChest  = zeros(1,5);
-        medActThigh = zeros(1,5);
-        sumActThigh  = zeros(1,5);
-        medActWrist = zeros(1,5);
-        sumActWrist  = zeros(1,5);
-
+        % Calculate time relative to previous alarm (etime in seconds, rel in minutes).
+        if iStamp > 1
+            % Previous alarm timestamp.
+            prevTime = alarmTimestamps(iStamp-1);
+            
+            rel = fix(etime(datevec(alarmTime), datevec(prevTime))/60);
+        else
+            % For first alarm, there is no previous alarm...
+            rel = 0;
+        end
+ 
         % Onset and offset of analysis periods.
-        onset  = [-60, -45, -30, -15, 0];
-        offset = [-45, -30, -15, 0, 5];
+        onset  = [-1*rel, -15, 0];
+        offset = [0, 0, 5];
+        
+        nSlots = numel(onset);
+        
+        % Declare vars.
+        medActChest = zeros(1,nSlots);
+        sumActChest = zeros(1,nSlots);
+        medActThigh = zeros(1,nSlots);
+        sumActThigh = zeros(1,nSlots);
+        medActWrist = zeros(1,nSlots);
+        sumActWrist = zeros(1,nSlots);
 
-        for timeSlot = 1:5
+        for timeSlot = 1:nSlots
   
             % Get 15 minute periods of data prior to the phone alarms
             % plus 5 minutes during the task
             startTime = addtodate(alarmTime, onset(timeSlot), 'minute');
             endTime   = addtodate(alarmTime, offset(timeSlot), 'minute');
+            
+            startTimes{timeSlot} = datestr(startTime, 'dd-mm-yyyy HH:MM');
+            endTimes{timeSlot}   = datestr(endTime, 'dd-mm-yyyy HH:MM');
             
             % Not all files were collected so we test for the existence of the file
             % first.
@@ -205,8 +220,8 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
                 if ~isempty(actChestData.Data)
 
                     % Features.
-                    medActChest(timeSlot) = nanmedian(actChestData);
-                    sumActChest(timeSlot) = sum(actChestData);
+                    [~,~,~,medActChest(timeSlot),~,~,sumActChest(timeSlot),~] = ...
+                        getDescriptivesData(actChestData); 
                     
                 else % NaN
 
@@ -226,8 +241,8 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
                 if ~isempty(actThighData.Data)
 
                     % Features. 
-                    medActThigh(timeSlot) = nanmedian(actThighData);
-                    sumActThigh(timeSlot) = sum(actThighData);
+                    [~,~,~,medActThigh(timeSlot),~,~,sumActThigh(timeSlot),~] = ...
+                        getDescriptivesData(actThighData); 
 
                 else % NaN
                     
@@ -247,9 +262,9 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
                 if ~isempty(actWristData.Data)
 
                     % Features.
-                    medActWrist(timeSlot) = nanmedian(actWristData);
-                    sumActWrist(timeSlot) = sum(actWristData);
-
+                    [~,~,~,medActWrist(timeSlot),~,~,sumActWrist(timeSlot),~] = ...
+                        getDescriptivesData(actWristData);        
+            
                 else % NaN
                     
                     medActWrist(timeSlot) = NaN;
@@ -266,12 +281,15 @@ if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
         formLabel  = formLabels{iStamp};
 
         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_activity_features.csv'], 'a');
-        fprintf(fid, ['%s, %4.0f, %s, %s, %s, ', repmat('%8.4f, ', 1, 29), '%8.4f\n'], ...
-                 SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
-                 datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-                 medActChest, sumActChest, ...
-                 medActThigh, sumActThigh, ...
-                 medActWrist, sumActWrist);
+        fprintf(fid, ['%s, %4.0f, ', repmat('%s, ', 1, 5), ... 
+            repmat('%8.4f, ', 1, numel(prefix)*numel(suffix)-1), '%8.4f\n'], ...
+            SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
+            datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], startTimes{:}), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], endTimes{:}), ...
+            medActChest, sumActChest, ...
+            medActThigh, sumActThigh, ...
+            medActWrist, sumActWrist);
         fclose(fid);
 
     end

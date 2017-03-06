@@ -7,10 +7,10 @@ function analyzePhilipsContact(SUBJECT)
 %   /temperature/raw
 %       /btmn_0000_temperature_contact_temp.txt
 
-PATH            = '/data1/recordings/btmn/subjects/';
+PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/temperature/raw/';
-PATH_TIMESTAMPS = '/data1/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/contact-temperature/';
+PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
+OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/contact-temperature/';
 
   
 % Force input to be string.
@@ -63,12 +63,16 @@ end
 % If either file exists, proceed.     
 if ~isempty(CONTACT)
 
+    % Generate labels for header.
+    prefix = {'medContactTemp'};
+    suffix = {'rel', '15', '0'};
+    labels  = generateLabels(prefix, suffix);
+    
     % Open file for writing data.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_contact-temperature_features.csv'], 'w');
-    fprintf(fid, [repmat('%s, ', 1, 11), '%s\n'],...
+    fprintf(fid, [repmat('%s, ', 1, 5), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
-        'alarmTime', 'startTime', 'endTime', ...
-        'meanContactTemp60', 'meanContactTemp45', 'meanContactTemp30', 'meanContactTemp15', 'meanContactTemp0');              
+        'alarmTime', labels);              
     fclose(fid);
 
 
@@ -78,33 +82,47 @@ if ~isempty(CONTACT)
         % Alarm timestamp.
         alarmTime = alarmTimestamps(iStamp);
 
-        % Declare vars.
-        meanTempContact = zeros(1,5);
+        % Calculate time relative to previous alarm (etime in seconds, rel in minutes).
+        if iStamp > 1
+            % Previous alarm timestamp.
+            prevTime = alarmTimestamps(iStamp-1);
+            
+            rel = fix(etime(datevec(alarmTime), datevec(prevTime))/60);
+        else
+            % For first alarm, there is no previous alarm...
+            rel = 0;
+        end
         
         % Onset and offset of analysis periods.
-        onset  = [-60, -45, -30, -15, 0];
-        offset = [-45, -30, -15, 0, 5];
+        onset  = [-1*rel, -15, 0];
+        offset = [0, 0, 5];
         
+        % Declare vars.
+        medTempContact = zeros(1,nSlots);
         
         % Loop though time slots.
-        for timeSlot = 1:5
+        for timeSlot = 1:nSlots
 
             % Get 15 minute periods of data prior to the phone alarms
             % plus 5 minutes during the task
             startTime = addtodate(alarmTime, onset(timeSlot), 'minute');
             endTime   = addtodate(alarmTime, offset(timeSlot), 'minute');
 
+            startTimes{timeSlot} = datestr(startTime, 'dd-mm-yyyy HH:MM');
+            endTimes{timeSlot}   = datestr(endTime, 'dd-mm-yyyy HH:MM');
+            
             % Extract data.
             tempFingerData = getsampleusingtime(temperature, startTime, endTime);
 
             % Extract features.
             if ~isempty(tempFingerData.Data)
 
-                meanTempContact(timeSlot) = mean(tempFingerData);
+            [~,~,~,medTempContact(timeSlot),~,~,~,~] = ...
+                    getDescriptivesData(tempFingerData);
 
             else % NaN.
 
-                meanTempContact(timeSlot) = NaN;
+                medTempContact(timeSlot) = NaN;
 
             end   
 
@@ -116,12 +134,13 @@ if ~isempty(CONTACT)
         formLabel  = formLabels{iStamp};
 
         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_contact-temperature_features.csv'], 'a');
-        fprintf(fid, ['%s, %4.0f, %s, %s, %s, %s, %s,', repmat('%4.2f, ', 1, 4), '%4.2f\n'], ...
+        fprintf(fid, ['%s, %4.0f, ', repmat('%s, ', 1, 5), ...
+            repmat('%8.4f, ', 1, numel(prefix)*numel(suffix)-1), '%8.4f\n'], ...
             SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ...
             datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-            datestr(startTime, 'dd-mm-yyyy HH:MM'), ...
-            datestr(endTime, 'dd-mm-yyyy HH:MM'), ...
-            meanTempContact);
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], startTimes{:}), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], endTimes{:}), ... 
+            medTempContact);
         fclose(fid);
 
     end

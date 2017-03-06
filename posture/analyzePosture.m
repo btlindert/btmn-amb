@@ -10,10 +10,10 @@ function analyzePosture(SUBJECT)
 %       /btmn_0000_actigraphy_thigh-left_acc.bin
 %       /btmn_0000_actigraphy_thigh-left_unisens.xml
 
-PATH            = '/data1/recordings/btmn/subjects/';
+PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/actigraphy/raw/';
-PATH_TIMESTAMPS = '/data1/recordings/btmn/import/150430_behavior_blindert/';
-OUTPUT_FOLDER   = '/data2/projects/btmn/analysis/amb/posture/';
+PATH_TIMESTAMPS = '/someren/recordings/btmn/import/150430_behavior_blindert/';
+OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/posture/';
 
 
 % Force input to be string.
@@ -111,9 +111,9 @@ if (exist(THIGH_ACC, 'file') == 2) && (exist(THIGH_XML, 'file') == 2)
 end
 
 % Generate labels for header.
-suffix = {'60', '45', '30', '15', '0'};
 prefix = {'posture', 'standing', 'sitting', 'supine', 'right', 'prone', ...
           'left', 'dynamic'};   
+suffix = {'rel', '15', '0'};
 labels = generateLabels(prefix, suffix);
 
 % Only proceed if both chest and thigh data exist.
@@ -128,34 +128,46 @@ if accChestPresent == 1 && accThighPresent == 1
 
     % Loop through all the samples.
     for iStamp = 1:numel(alarmTimestamps)
-
    
         % Alarm time stamp.
         alarmTime = alarmTimestamps(iStamp);
         
-        
-        % Declare vars.
-        classification = zeros(1,5);
-        standing       = zeros(1,5);
-        sitting        = zeros(1,5);
-        supine         = zeros(1,5);
-        right          = zeros(1,5);
-        prone          = zeros(1,5);
-        left           = zeros(1,5);
-        dynamic        = zeros(1,5);
-        
+        % Calculate time relative to previous alarm (etime in seconds, rel in minutes).
+        if iStamp > 1
+            % Previous alarm timestamp.
+            prevTime = alarmTimestamps(iStamp-1);
+            
+            rel = fix(etime(datevec(alarmTime), datevec(prevTime))/60);
+        else
+            % For first alarm, there is no previous alarm...
+            rel = 0;
+        end
         
         % Onset and offset of analysis periods.
-        onset  = [-60, -45, -30, -15, 0];
-        offset = [-45, -30, -15, 0, 5];
-
+        onset  = [-1*rel, -15, 0];
+        offset = [0, 0, 5];
         
-        for timeSlot = 1:5
+        nSlots = numel(onset);
+        
+        % Declare vars.
+        classification = zeros(1,nSlots);
+        standing       = zeros(1,nSlots);
+        sitting        = zeros(1,nSlots);
+        supine         = zeros(1,nSlots);
+        right          = zeros(1,nSlots);
+        prone          = zeros(1,nSlots);
+        left           = zeros(1,nSlots);
+        dynamic        = zeros(1,nSlots);
+        
+        for timeSlot = 1:nSlots
             
             % Get 15 minute periods of data prior to the phone alarms
             % plus 5 minutes during the task
             startTime = addtodate(alarmTime, onset(timeSlot), 'minute');
             endTime   = addtodate(alarmTime, offset(timeSlot), 'minute');
+            
+            startTimes{timeSlot} = datestr(startTime, 'dd-mm-yyyy HH:MM');
+            endTimes{timeSlot}   = datestr(endTime, 'dd-mm-yyyy HH:MM');
             
             % Data.
             accChestData = getsampleusingtime(accChest, startTime, endTime);
@@ -188,11 +200,14 @@ if accChestPresent == 1 && accThighPresent == 1
         formLabel  = formLabels{iStamp};
         
         fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_posture_features.csv'], 'a');
-        fprintf(fid, ['%s, %4.0f, %s, %s, %s, ', repmat('%g, ', 1, numel(prefix)*numel(suffix)-1), '%g\n'], ...
-                 SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
-                 datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-                 classification, standing, sitting, supine, right, prone, ...
-                 left, dynamic);
+        fprintf(fid, ['%s, %4.0f, ', repmat('%s, ', 1, 5), ...
+            repmat('%g, ', 1, numel(prefix)*numel(suffix)-1), '%g\n'], ...
+            SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
+            datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], startTimes{:}), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], endTimes{:}), ... 
+            classification, standing, sitting, supine, right, prone, ...
+            left, dynamic);
         fclose(fid);
     
     end

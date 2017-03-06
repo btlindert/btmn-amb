@@ -113,7 +113,7 @@ end
 
 % Generate labels for header.
 prefix = {'startTime', 'endTime'};
-suffix = {'Rel', '60', '45', '30', '15', '0'};
+suffix = {'Rel', '15', '0'};
 times  = generateLabels(prefix, suffix);
 
 prefix = {'duration', 'meanLux', 'meanThreeParLog', 'meanFourParLog', 'meanCla', 'meanCs', 'meanAct', 'meanX', 'meanY', 'nNan'};   
@@ -149,8 +149,8 @@ if ~isempty(INNER) || ~isempty(OUTER)
         end
 
         % Onset and offset of analysis periods.
-        onset  = [-1*rel, -60, -45, -30, -15, 0];
-        offset = [0, -45, -30, -15, 0, 5];
+        onset  = [-1*rel, -15, 0];
+        offset = [0, 0, 5];
       
         nSlots = numel(onset);
              
@@ -290,8 +290,8 @@ if ~isempty(INNER) || ~isempty(OUTER)
             repmat('%8.4f, ', 1, numel(prefix)*numel(suffix)-1), '%8.4f\n'], ...
             SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
             datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-            sprintf([repmat('%s, ', 1, 5), '%s'], startTimes{:}), ...
-            sprintf([repmat('%s, ', 1, 5), '%s'], endTimes{:}), ... 
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], startTimes{:}), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], endTimes{:}), ... 
             duration, meanLux, meanThreeParLog, meanFourParLog, meanCla, meanCs, meanAct, meanX, meanY, nNan);
         fclose(fid);
         
