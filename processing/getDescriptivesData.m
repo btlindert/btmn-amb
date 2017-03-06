@@ -1,4 +1,5 @@
-function [iqrVal, maxVal, meanVal, medianVal, minVal, stdVal, sumVal, varVal] = getDescriptivesData(data)
+function [iqrVal, maxVal, meanVal, medianVal, minVal, stdVal, sumVal, varVal] = ...
+    getDescriptivesData(data)
 % getMeanData calculates the mean of the data (ts object). 
 % If data is not empty, else it's a NaN.
 
