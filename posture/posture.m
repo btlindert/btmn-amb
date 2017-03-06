@@ -1,4 +1,4 @@
-function [modeClassification, secStanding, secSitting, secSupine, ...
+function [modeClassification, secUndefined, secUpright, secStanding, secSitting, secSupine, ...
     secRight, secProne, secLeft, secDynamic] = posture(dataChest, dataThigh, plots)
 % POSTURE classifies posture based on the inclination of the thigh and
 % chest sensors using a fixed threshold classification algorithm by Lugade
@@ -155,9 +155,12 @@ for i = 1:fs:seconds*fs;
     chestTA  = mean(chestTransverseAngle2D(i:i+fs-1));
     thighA   = mean(thighAngle3D(i:i+fs-1));
    
-    % Static vs dynamic.
-    movement = 'dynamic';
-    if sma <= 0.135    
+    % Static vs dynamic based on chest data.
+    if sma > 0.135 
+        
+        movement = 'dynamic';
+        
+    elseif sma <= 0.135    
         % Relabel to static movement.
         movement = 'static';
         
@@ -167,56 +170,74 @@ for i = 1:fs:seconds*fs;
     
         end
         
+    else 
+        
+        movement = 'undefined';
+        
     end
 
     if strcmpi(movement, 'static')
     % Static orientation.
         if chestA < 50 || chestA > 130
-        % Upright || Inverted
+            
+            oneSensorClassification(sec) = 7; % upright = standing/sitting
+            
+            % Upright || Inverted
             if thighA < 45 || thighA > 135
                 % Upright || Inverted
-                classification(sec) = 6; % standing
+                twoSensorClassification(sec) = 6; % standing
+            elseif thighA >= 45 && thighA <= 135
+                twoSensorClassification(sec) = 5; % sitting
             else
-                classification(sec) = 5; % sitting
-            end           
+                twoSensorClassification(sec) = 8; % undefined
+            end
+            
         elseif chestA >= 50 && chestA <= 130 
         % Lying down.
         % Chest sensor inversion has no effect on the transverse angle.
             if chestTA < 45 || chestTA >= 315
-                classification(sec) = 4; % supine
+                oneSensorClassification(sec) = 4; % supine
             elseif chestTA >= 45 && chestTA < 135
-                classification(sec) = 3; % right
+                oneSensorClassification(sec) = 3; % right
             elseif chestTA >= 135 && chestTA < 225
-                classification(sec) = 2; % prone
+                oneSensorClassification(sec) = 2; % prone
             elseif chestTA >= 225 && chestTA < 315
-                classification(sec) = 1; % left   
-            end      
+                oneSensorClassification(sec) = 1; % left  
+            else 
+                oneSensorClassification(sec) = 8; % undefined
+            end
+        else
+            % Undefined.
+            oneSensorClassification(sec) = 8; % undefined
         end
-%         else
-%             % Undefined.
-%             classification(sec) = 7; % undefined
-%         end
     elseif strcmpi(movement, 'dynamic')
-        classification(sec) = 0; % dynamic
+        
+        oneSensorClassification(sec) = 0; % dynamic
+    
+    elseif strcmpi(movement, 'undefined')
+        
+        oneSensorClassification(sec) = 8; % undefined.
+    
     end
 end
 
 %% Mode posture.
 % Choose the most frequently occuring posture.
-modeClassification = mode(classification);
+modeClassification = mode(twoSensorClassification);
 
 
 %% Seconds in each posture.
 % Calculate percentages in R: if timeSlot duration changes, % calc can be
 % easily changed in R.
-secStanding = length(find(classification == 6));
-secSitting  = length(find(classification == 5));
-secSupine   = length(find(classification == 4));
-secRight    = length(find(classification == 3));
-secProne    = length(find(classification == 2));
-secLeft     = length(find(classification == 1));
-secDynamic  = length(find(classification == 0));
-
+secUndefined = length(find(oneSensorClassification == 8));
+secUpright   = length(find(oneSensorClassification == 7));
+secStanding  = length(find(twoSensorClassification == 6));
+secSitting   = length(find(twoSensorClassification == 5));
+secSupine    = length(find(oneSensorClassification == 4));
+secRight     = length(find(oneSensorClassification == 3));
+secProne     = length(find(oneSensorClassification == 2));
+secLeft      = length(find(oneSensorClassification == 1));
+secDynamic   = length(find(oneSensorClassification == 0));
 
 %% Plots
 if strcmpi(plots, 'on')
@@ -286,7 +307,7 @@ if strcmpi(plots, 'on')
     grid on
 
     subplot(11,1,10:11);
-    bar(classification)
+    bar(twoSensorClassification)
     title('classification');
     axis tight
     ylim([0, 7]);
