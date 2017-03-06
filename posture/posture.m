@@ -223,7 +223,7 @@ end
 
 %% Mode posture.
 % Choose the most frequently occuring posture.
-modeClassification = mode(twoSensorClassification);
+modeClassification = mode(oneSensorClassification);
 
 
 %% Seconds in each posture.
