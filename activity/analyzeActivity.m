@@ -157,15 +157,20 @@ end
 if accChestPresent == 1 || accThighPresent == 1 || accWristPresent == 1
 
     % Generate labels for header.
+    prefix = {'startTime', 'endTime'};
+    suffix = {'rel', '15', '0'};
+    times  = generateLabels(prefix, suffix);
+
     prefix = {'medActChest', 'sumActChest', 'medActThigh', 'sumActThigh', 'medActWrist', 'sumActWrist'};
     suffix = {'rel', '15', '0'};
     labels  = generateLabels(prefix, suffix);
     
+    
     % Open file and write headers.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_activity_features.csv'], 'w');
-    fprintf(fid, [repmat('%s,', 1, 5), '%s\n'],...
+    fprintf(fid, [repmat('%s,', 1, 6), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ... 
-        'alarmTime', labels); 
+        'alarmTime', times, labels); 
     fclose(fid);
     
     

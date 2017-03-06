@@ -111,6 +111,10 @@ if (exist(THIGH_ACC, 'file') == 2) && (exist(THIGH_XML, 'file') == 2)
 end
 
 % Generate labels for header.
+prefix = {'startTime', 'endTime'};
+suffix = {'rel', '15', '0'};
+times  = generateLabels(prefix, suffix);
+
 prefix = {'posture', 'standing', 'sitting', 'supine', 'right', 'prone', ...
           'left', 'dynamic'};   
 suffix = {'rel', '15', '0'};
@@ -121,9 +125,9 @@ if accChestPresent == 1 && accThighPresent == 1
 
     % Write headers to the output file.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_posture_features.csv'], 'w');
-    fprintf(fid, [repmat('%s, ', 1, 5), '%s\n'],...
+    fprintf(fid, [repmat('%s, ', 1, 6), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ... 
-        'alarmTime', labels);       
+        'alarmTime', times, labels);       
     fclose(fid);
 
     % Loop through all the samples.

@@ -136,15 +136,19 @@ if tempChestPresent == 1 || tempThighPresent == 1 || tempWristPresent == 1
     
     
     % Generate labels for header.
+    prefix = {'startTime', 'endTime'};
+    suffix = {'rel', '15', '0'};
+    times  = generateLabels(prefix, suffix);
+
     prefix = {'medTemperatureChest', 'medTemperatureWrist', 'medTemperatureThigh'};
     suffix = {'rel', '15', '0'};
     labels  = generateLabels(prefix, suffix);
     
     % Open file and write headers.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_movisens-temperature_features.csv'], 'w');
-    fprintf(fid, [repmat('%s, ', 1, 5), '%s\n'],...
+    fprintf(fid, [repmat('%s, ', 1, 6), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
-        'alarmTime', labels);              
+        'alarmTime', times, labels);              
     fclose(fid);
 
     % Loop through all the alarms.

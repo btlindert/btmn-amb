@@ -64,15 +64,19 @@ end
 if ~isempty(CONTACT)
 
     % Generate labels for header.
+    prefix = {'startTime', 'endTime'};
+    suffix = {'rel', '15', '0'};
+    times  = generateLabels(prefix, suffix);
+
     prefix = {'medContactTemp'};
     suffix = {'rel', '15', '0'};
     labels  = generateLabels(prefix, suffix);
     
     % Open file for writing data.
     fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_contact-temperature_features.csv'], 'w');
-    fprintf(fid, [repmat('%s, ', 1, 5), '%s\n'],...
+    fprintf(fid, [repmat('%s, ', 1, 6), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ...
-        'alarmTime', labels);              
+        'alarmTime', times, labels);              
     fclose(fid);
 
 
