@@ -3,7 +3,7 @@ function selected = validSelection(inner, outer, startTime, endTime,...
 
 % validSelection selects the actual valid measurement from inner and outer.
 
-if ~isempty(outer)
+if ~isempty(outer) && ~isempty(selOuter)
  
     % Select the outer data
     outerData = getsampleusingtime(outer, startTime, endTime);
@@ -23,7 +23,7 @@ end
 
 
 
-if ~isempty(inner)
+if ~isempty(inner) && ~isempty(selInner)
  
     % Select the outer data
     innerData = getsampleusingtime(inner, startTime, endTime);
@@ -32,7 +32,7 @@ if ~isempty(inner)
     % interpolate by creating new timestamps of lenght(selOuter).
     if ~isequal(length(innerData.data), length(selInner)) 
         % Create new time series object.
-        ts1 = ts;
+        ts1 = timeseries;
         ts1.data = selInner;
         ts1.time = setuniformtime(ts1, 'Starttime', startTime, 'EndTime', endTime);
         innerData = resample(innerData, ts1.time);
