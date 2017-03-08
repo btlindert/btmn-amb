@@ -80,6 +80,7 @@ end
 % Forward and backward movement of the legs means rotation around the z-axis 
 % in the x,y plane).
 gThighUpright = [1, 0, 0];
+thighAngle3D  = zeros(size(dataThigh, 1),1);
 
 for i = 1:size(dataThigh, 1)
     
@@ -145,6 +146,9 @@ CWT = max(abs(coefs));
 freq = scal2frq(scales, wname, delta);
 
 %% Classification
+oneSensorClassification = nan(seconds,1);
+twoSensorClassification = nan(seconds,1);
+
 % Per second.
 for i = 1:fs:seconds*fs;
     
