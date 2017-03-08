@@ -2,6 +2,7 @@
 #$ -N posture
 #$ -S /bin/bash
 #$ -q regular.q
+#$ -l h_vmem=16G
 #$ -o /someren/projects/btmn/analysis/amb/posture/logs/$JOB_NAME_$JOB_ID.o
 #$ -e /someren/projects/btmn/analysis/amb/posture/logs/$JOB_NAME_$JOB_ID.e
 #$ -j y
