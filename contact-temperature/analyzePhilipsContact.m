@@ -102,6 +102,8 @@ if ~isempty(CONTACT)
         onset  = [-1*rel, -15, 0];
         offset = [0, 0, 5];
         
+        nSlots = numel(onset);
+        
         % Declare vars.
         medTempContact = zeros(1,nSlots);
         
