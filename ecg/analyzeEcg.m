@@ -4,10 +4,8 @@ function analyzeEcg(SUBJECT)
 %
 % Path order is as follows:
 % /data1/recordings/btmn/subjects/0000
-%   /actigraphy/raw
-%       /btmn_0000_actigraphy_wrist-left_tempskin.bin
-%       /btmn_0000_actigraphy_thigh-left_tempskin.bin
-%       /btmn_0000_actigraphy_chest_tempskin.bin
+%   /physiology/raw
+%       /btmn_0000_physiology_ecg.bin
 
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/physiology/raw/';
@@ -51,13 +49,11 @@ end
 % Since 'exist' does not work on tscollection objects we define vars to
 % specify if a var is present.
 ecgPresent = 0;
-tempThighPresent = 0;
-tempWristPresent = 0;
 
 
 % Create symlink names.
-CHEST_TEMP = [PATH SUBJECT SUB_PATH 'btmn_' SUBJECT '_actigraphy_tempskin.bin'];
-CHEST_XML  = [PATH SUBJECT XML_PATH 'btmn_' SUBJECT '_actigraphy_unisens.xml'];
+CHEST_ECG = [PATH SUBJECT SUB_PATH 'btmn_' SUBJECT '_physiology_ecg.bin'];
+CHEST_XML = [PATH SUBJECT XML_PATH 'btmn_' SUBJECT '_actigraphy_unisens.xml'];
 
 % Generate symbolic links on the fly in a /tmp folder.
 % The folder is subject specific to avoid overlap during batch processing.
@@ -70,20 +66,20 @@ system(['mkdir ' SYMLINK_FOLDER]);
 
 
 % Check if each file exists and load chest data.
-if (exist(CHEST_TEMP, 'file') == 2) && (exist(CHEST_XML, 'file') == 2)
+if (exist(CHEST_ECG, 'file') == 2) && (exist(CHEST_XML, 'file') == 2)
     
     ecgPresent = 1;
        
     % Create symbolic links.
     status = system(['ln -s ' CHEST_XML ' ' SYMLINK_FOLDER 'unisens.xml']);
-    status = system(['ln -s ' CHEST_TEMP ' ' SYMLINK_FOLDER 'tempskin.bin']);
+    status = system(['ln -s ' CHEST_ECG ' ' SYMLINK_FOLDER 'ecg.bin']);
 
     % Load data.
-    ecgChest = movisensRead([SYMLINK_FOLDER, 'tempskin.bin']);
+    ecgChest = movisensRead([SYMLINK_FOLDER, 'ecg.bin']);
 
     % Remove symbolic links.
     system(['rm ' SYMLINK_FOLDER 'unisens.xml']);
-    system(['rm ' SYMLINK_FOLDER 'tempskin.bin']);
+    system(['rm ' SYMLINK_FOLDER 'ecg.bin']);
     
 end
 
@@ -156,7 +152,7 @@ if ecgPresent == 1
                 
             else
                 
-                medTemperatureChest(timeSlot) = NaN;
+                %medTemperatureChest(timeSlot) = NaN;
                 
             end
             
