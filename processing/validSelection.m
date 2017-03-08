@@ -12,7 +12,7 @@ if ~isempty(outer)
     % interpolate by creating new timestamps of lenght(selOuter).
     if ~isequal(length(outerData.data), length(selOuter)) 
         % Create new time series object.
-        ts1 = ts;
+        ts1 = timeseries;
         ts1.data = selOuter;
         ts1.time = setuniformtime(ts1, 'Starttime', startTime, 'EndTime', endTime);
         outerData = resample(outerData, ts1.time);
