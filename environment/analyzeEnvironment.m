@@ -1,4 +1,4 @@
-function analyzeEnvironment(SUBJECT)
+function analyzeEnvironment(SUBJECT, DATE)
 % analyzeEnvironment is a combined version of analyzeAmbientLight, 
 % analyzeAmbientHumidity and analyzeAmbientTemperature. All these sensors
 % were integrated in the same brooche. It thus makes sense to combine the
@@ -16,6 +16,10 @@ function analyzeEnvironment(SUBJECT)
 % TODO/OPTIONAL: ADD LOADING OF COATHEADER WITH RED/GREEN/BLUE/ACTIVITY DATA
 disp('Running analyzeEnvironment...');
 
+% Force input to be string.
+SUBJECT = char(SUBJECT); 
+DATE    = char(DATE);
+
 plots               = 'off';
 validityPlots       = 'off';
 validSelectionPlots = 'off';
@@ -26,11 +30,7 @@ LIGHT_PATH      = '/ambient-light/raw/';
 HUM_PATH        = '/humdity/raw/';
 TEMP_PATH       = '/temperature/raw/';
 PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/ambient-light/';
-
-  
-% Force input to be string.
-SUBJECT = char(SUBJECT);  
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/environment/', DATE, '/'];
 
 
 % Recursively find path to timestamps file.
@@ -172,7 +172,7 @@ end
 
 % Generate labels for header.
 prefix = {'startTime', 'endTime'};
-suffix = {'Rel', '60', '45', '30', '15', '0'};
+suffix = {'rel', '15', '0'};
 times  = generateLabels(prefix, suffix);
 
 prefix = {'duration', 'medLux', 'medThreeParLog', 'medFourParLog', 'medCla', 'medCs', 'medAct', 'medX', 'medY', 'medHum', 'medTemp', 'nNan'};   
@@ -208,8 +208,8 @@ if ~isempty(INNER_LIGHT) || ~isempty(OUTER_LIGHT)
         end
 
         % Onset and offset of analysis periods.
-        onset  = [-1*rel, -60, -45, -30, -15, 0];
-        offset = [0, -45, -30, -15, 0, 5];
+        onset  = [-1*rel, -15, 0];
+        offset = [0, 0, 5];
       
         nSlots = numel(onset);
              
