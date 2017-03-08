@@ -1,4 +1,4 @@
-function analyzeActivity(SUBJECT)
+function analyzeActivity(SUBJECT, DATE)
 % analyzeActivity analyzes the accelerometer data from the thigh, wrist and
 % chest sensors.
 %
@@ -11,15 +11,16 @@ function analyzeActivity(SUBJECT)
 %       /btmn_0000_actigraphy_thigh-left_unisens.xml
 %       /btmn_0000_actigraphy_wrist-left_acc.bin
 %       /btmn_0000_actigraphy_wrist-left_unisens.xml
+disp('Running analyzeActivity...');
+
+% Force input to be string.
+SUBJECT = char(SUBJECT);
+DATE    = char(DATE);
 
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/actigraphy/raw/';
 PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/activity/';
-
-
-% Force input to be string.
-SUBJECT = char(SUBJECT);
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/activity/', DATE, '/'];
 
 
 % Path to symlink folder.

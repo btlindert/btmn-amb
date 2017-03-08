@@ -1,4 +1,4 @@
-function analyzeBaroPressure(SUBJECT)
+function analyzeBaroPressure(SUBJECT, DATE)
 % analyzeBaroPressure analyzes the data from the Movisens sensors at the
 % wrist, chest and thigh
 %
@@ -8,16 +8,17 @@ function analyzeBaroPressure(SUBJECT)
 %       /btmn_0000_actigraphy_wrist-left_press.bin
 %       /btmn_0000_actigraphy_thigh-left_press.bin
 %       /btmn_0000_actigraphy_chest_press.bin
+disp('Running analyzeBaroPressure...');
+
+% Force input to be string.
+SUBJECT = char(SUBJECT);
+DATE    = char(DATE);
 
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/actigraphy/raw/';
 PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/baro-pressure/';
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/baro-pressure/', DATE, '/'];
 SYMLINK_FOLDER  = [OUTPUT_FOLDER SUBJECT '/'];
-
-
-% Force input to be string.
-SUBJECT = char(SUBJECT);
 
 
 % Recursively find path to timestamps file.

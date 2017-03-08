@@ -1,4 +1,4 @@
-function analyzeSleep(SUBJECT)
+function analyzeSleep(SUBJECT, DATE)
 % sleepAnalysis analyzes the wrist actigraphy data to extract sleep
 % parameters.
 %
@@ -7,7 +7,11 @@ function analyzeSleep(SUBJECT)
 %   /actigraphy/raw
 %       /btmn_0000_actigraphy_wrist-left_acc.bin
 %       /btmn_0000_actigraphy_wrist-left_unisens.xml
+disp('Running analyzeSleep...');
 
+% Force input to be string.
+SUBJECT = char(SUBJECT); 
+DATE    = char(DATE);
 
 % Add path to actant scripts.
 addpath(genpath('/someren/projects/btmn/scripts/actant/')); 
@@ -16,11 +20,7 @@ addpath(genpath('/someren/projects/btmn/scripts/actant/'));
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/actigraphy/raw/';
 PATH_CSD        = '/someren/projects/btmn/analysis/amb/sleep/csd/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/sleep/';
-
-
-% Force input to be string.
-SUBJECT = char(SUBJECT);
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/sleep/', DATE, '/'];
 
 
 % Path to symlink folder.

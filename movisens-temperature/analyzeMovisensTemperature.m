@@ -1,4 +1,4 @@
-function analyzeMovisensTemperature(SUBJECT)
+function analyzeMovisensTemperature(SUBJECT, DATE)
 % movisensTemperature analyzes the data from the Movisens sensors at the
 % wrist, chest and thigh
 %
@@ -8,16 +8,17 @@ function analyzeMovisensTemperature(SUBJECT)
 %       /btmn_0000_actigraphy_wrist-left_tempskin.bin
 %       /btmn_0000_actigraphy_thigh-left_tempskin.bin
 %       /btmn_0000_actigraphy_chest_tempskin.bin
+disp('Running analyzeMovisensTemperature...');
+
+% Force input to be string.
+SUBJECT = char(SUBJECT); 
+DATE    = char(DATE);
 
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/actigraphy/raw/';
 PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/movisens-temperature/';
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/movisens-temperature/', DATE, '/'];
 SYMLINK_FOLDER  = [OUTPUT_FOLDER SUBJECT '/'];
-
-
-% Force input to be string.
-SUBJECT = char(SUBJECT);
 
 
 % Recursively find path to timestamps file.

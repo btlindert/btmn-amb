@@ -1,4 +1,4 @@
-function analyzeAmbientHumidity(SUBJECT)
+function analyzeAmbientHumidity(SUBJECT, DATE)
 % analyzeAmbientHumidity analyzes the humidity data from the iButton hydrochron
 % sensors at the coat and sweater.
 %
@@ -7,15 +7,16 @@ function analyzeAmbientHumidity(SUBJECT)
 %   /humidity/raw
 %       /btmn_0000_humidity_coat.txt/.csv
 %       /btmn_0000_humidity_sweater.txt/.csv
+disp('Running analyzeAmbientHumidity...');
+
+% Force input to be string.
+SUBJECT = char(SUBJECT);
+DATE    = char(DATE);
 
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/humidity/raw/';
 PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/ambient-humidity/';
-
-
-% Force input to be string.
-SUBJECT = char(SUBJECT);
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/ambient-humidity/', DATE, '/'];
 
 
 % Recursively find path to timestamps file.

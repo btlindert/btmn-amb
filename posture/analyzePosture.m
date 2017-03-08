@@ -1,4 +1,4 @@
-function analyzePosture(SUBJECT)
+function analyzePosture(SUBJECT, DATE)
 % analyzePosture analyzes the accelerometer data from the thigh and
 % chest sensors to extract posture.
 %
@@ -9,15 +9,16 @@ function analyzePosture(SUBJECT)
 %       /btmn_0000_actigraphy_unisens.xml (chest)
 %       /btmn_0000_actigraphy_thigh-left_acc.bin
 %       /btmn_0000_actigraphy_thigh-left_unisens.xml
+disp('Running analyzePosture...');
+
+% Force input to be string.
+SUBJECT = char(SUBJECT); 
+DATE    = char(DATE);
 
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/actigraphy/raw/';
-PATH_TIMESTAMPS = '/someren/recordings/btmn/import/150430_behavior_blindert/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/posture/';
-
-
-% Force input to be string.
-SUBJECT = char(SUBJECT);
+PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/posture/', DATE, '/'];
 
 
 % Path to symlink folder.

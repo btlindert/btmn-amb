@@ -1,4 +1,4 @@
-function analyzeAmbientTemperature(SUBJECT)
+function analyzeAmbientTemperature(SUBJECT, DATE)
 % analyzeAmbientTemperature analyzes the temperature data from the iButton 
 % sensors at the coat and sweater.
 %
@@ -7,14 +7,16 @@ function analyzeAmbientTemperature(SUBJECT)
 %   /temperature/raw
 %       /btmn_0000_temperature_coat.txt/.csv
 %       /btmn_0000_temperature_sweater.txt/.csv
+disp('Running analyzeAmbientTemperature...');
+
+% Force input to be string.
+SUBJECT = char(SUBJECT);
+DATE    = char(DATE);
 
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/temperature/raw/';
 PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/ambient-temperature/';
-
-% Force input to be string.
-SUBJECT = char(SUBJECT);
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/ambient-temperature/', DATE, '/'];
 
 
 % Recursively find path to timestamps file.

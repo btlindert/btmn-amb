@@ -1,4 +1,4 @@
-function analyzePhilipsContact(SUBJECT)
+function analyzePhilipsContact(SUBJECT, DATE)
 % AnalyzePhilipsContact analyzes the data from the Philips contact
 % temperature sensor at the finger.
 %
@@ -6,15 +6,16 @@ function analyzePhilipsContact(SUBJECT)
 % /data1/recordings/btmn/subjects/0000
 %   /temperature/raw
 %       /btmn_0000_temperature_contact_temp.txt
+disp('Running analyzePhilipsContact...');
+
+% Force input to be string.
+SUBJECT = char(SUBJECT);
+DATE    = char(DATE);
 
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/temperature/raw/';
 PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/contact-temperature/';
-
-  
-% Force input to be string.
-SUBJECT = char(SUBJECT);
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/contact-temperature/', DATE, '/'];
 
 
 % Recursively find path to timestamps file.

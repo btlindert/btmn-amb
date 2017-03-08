@@ -1,4 +1,4 @@
-function analyzeAmbientLight(SUBJECT)
+function analyzeAmbientLight(SUBJECT, DATE)
 % analyzeAmbientLight analyzes the light data from the dimesimeter sensors 
 % at the coat and sweater.
 
@@ -11,6 +11,10 @@ function analyzeAmbientLight(SUBJECT)
 % TODO/OPTIONAL: ADD LOADING OF COATHEADER WITH RED/GREEN/BLUE/ACTIVITY DATA
 disp('Running analyzeAmbientLight...');
 
+% Force input to be string.
+SUBJECT = char(SUBJECT);
+DATE    = char(DATE);
+
 plots               = 'off';
 validityPlots       = 'off';
 validSelectionPlots = 'off';
@@ -19,11 +23,7 @@ validSelectorsPlots = 'off';
 PATH            = '/someren/recordings/btmn/subjects/';
 SUB_PATH        = '/ambient-light/raw/';
 PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
-OUTPUT_FOLDER   = '/someren/projects/btmn/analysis/amb/ambient-light/';
-
-  
-% Force input to be string.
-SUBJECT = char(SUBJECT);  
+OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/ambient-light/', DATE, '/'];
 
 
 % Recursively find path to timestamps file.
