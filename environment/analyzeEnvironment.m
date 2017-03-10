@@ -27,7 +27,7 @@ validSelectorsPlots = 'off';
 
 PATH            = '/someren/recordings/btmn/subjects/';
 LIGHT_PATH      = '/ambient-light/raw/';
-HUM_PATH        = '/humdity/raw/';
+HUM_PATH        = '/humidity/raw/';
 TEMP_PATH       = '/temperature/raw/';
 PATH_TIMESTAMPS = '/someren/recordings/btmn/import/';
 OUTPUT_FOLDER   = ['/someren/projects/btmn/analysis/amb/environment/', DATE, '/'];
@@ -71,7 +71,7 @@ files = subdir([PATH SUBJECT LIGHT_PATH '*sweater_processed.*']);
 
 if size(files, 1) == 1
 
-    disp('Inner data present...');
+    disp('Inner light data present...');
     INNER_LIGHT    = files(1).name;
     [luxInner, claInner, csInner, actInner, xInner, yInner] = ...
         dimesimeterRead(INNER_LIGHT);
@@ -81,14 +81,14 @@ if size(files, 1) == 1
 
 else 
     
-    INNER_LIGHT      = '';
-    validInner = [];
-    luxInner   = [];
-    claInner   = [];
-    csInner    = [];
-    actInner   = [];
-    xInner     = [];
-    yInner     = [];
+    INNER_LIGHT = '';
+    validInner  = [];
+    luxInner    = [];
+    claInner    = [];
+    csInner     = [];
+    actInner    = [];
+    xInner      = [];
+    yInner      = [];
     
 end 
 
@@ -97,7 +97,7 @@ files = subdir([PATH SUBJECT LIGHT_PATH '*coat_processed.*']);
 
 if size(files, 1) == 1
 
-    disp('Outer data present...')
+    disp('Outer light data present...')
     OUTER_LIGHT    = files(1).name;
     [luxOuter, claOuter, csOuter, actOuter, xOuter, yOuter] = ...
         dimesimeterRead(OUTER_LIGHT);
@@ -107,14 +107,14 @@ if size(files, 1) == 1
 
 else 
     
-    OUTER_LIGHT      = '';
-    validOuter = [];
-    luxOuter   = [];
-    claOuter   = [];
-    csOuter    = [];
-    actOuter   = [];
-    xOuter     = [];
-    yOuter     = [];
+    OUTER_LIGHT = '';
+    validOuter  = [];
+    luxOuter    = [];
+    claOuter    = [];
+    csOuter     = [];
+    actOuter    = [];
+    xOuter      = [];
+    yOuter      = [];
     
 end
 
@@ -129,8 +129,9 @@ files = subdir([PATH SUBJECT TEMP_PATH '*sweater*']);
 
 if size(files, 1) == 1
 
+    disp('Inner temperature data present...');
     INNER_TEMP = files(1).name;
-    temperatureInner = ibuttonTemperatureRead(INNER_TEMP);
+    tempInner  = ibuttonTemperatureRead(INNER_TEMP);
     
 end    
 
@@ -139,8 +140,9 @@ files = subdir([PATH SUBJECT TEMP_PATH '*coat*']);
 
 if size(files, 1) == 1
 
+    disp('Outer temperature data present...');
     OUTER_TEMP = files(1).name;
-    temperatureOuter = ibuttonTemperatureRead(OUTER_TEMP);
+    tempOuter  = ibuttonTemperatureRead(OUTER_TEMP);
 
 end
 
@@ -154,8 +156,9 @@ files = subdir([PATH SUBJECT HUM_PATH '*sweater.*']);
 
 if size(files, 1) == 1
 
-    INNER_HUM    = files(1).name;
-    humInner = ibuttonHumidityRead(INNER_HUM);
+    disp('Inner humidity data present...');
+    INNER_HUM = files(1).name;
+    humInner  = ibuttonHumidityRead(INNER_HUM);
 
 end    
 
@@ -164,8 +167,9 @@ files = subdir([PATH SUBJECT HUM_PATH '*coat.*']);
 
 if size(files, 1) == 1
 
-    OUTER_HUM    = files(1).name;
-    humOuter = ibuttonHumidityRead(OUTER_HUM);
+    disp('Outer humidity data present...');
+    OUTER_HUM = files(1).name;
+    humOuter  = ibuttonHumidityRead(OUTER_HUM);
 
 end
 
@@ -230,7 +234,7 @@ if ~isempty(INNER_LIGHT) || ~isempty(OUTER_LIGHT)
         nNan           = zeros(1,nSlots);
 
         for timeSlot = 1:nSlots
-        
+            
             % Get 15 minute periods of data prior to the phone alarms
             % plus 5 minutes during the task
             startTime = addtodate(alarmTime, onset(timeSlot), 'minute');
@@ -243,38 +247,38 @@ if ~isempty(INNER_LIGHT) || ~isempty(OUTER_LIGHT)
             % first.
             if ~isempty(INNER_LIGHT) || ~isempty(OUTER_LIGHT)
 
-                [selInner, selOuter, selMax] = validSelectors(validInner, validOuter,...
+                [selInner, selOuter, selMax, N] = validSelectors(validInner, validOuter,...
                     startTime, endTime, validSelectorsPlots);
                 
                 % Select the actual data samples.
                 luxSelected = validSelection(luxInner, luxOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, validSelectionPlots);
+                    selInner, selOuter, selMax, N, validSelectionPlots);
                 
                 claSelected = validSelection(claInner, claOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                 
                 csSelected = validSelection(csInner, csOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                 
                 actSelected = validSelection(actInner, actOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                                 
                 xSelected = validSelection(xInner, xOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                                 
                 ySelected = validSelection(yInner, yOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                 
                 % Humidity
                 humSelected = validSelection(humInner, humOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                 
                 % Temperature
                 tempSelected = validSelection(tempInner, tempOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                 
                 % Log10.
-                medLux(timeSlot) = nanmean(log10(luxSelected + 1));
+                medLux(timeSlot) = nanmedian(log10(luxSelected + 1));
                 
                 % 3-parameter logistic
                 a = -0.161;

@@ -28,8 +28,8 @@ if (~isempty(selInner) && ~isempty(innerData.data)) && ...
     % Both inner and outer data is valid and present.
     
     % Select the data and interpolate if required.
-    innerData = interpolateData(innerData, N);
-    outerData = interpolateData(outerData, N);
+    innerData = interpolateData(innerData, N, startTime, endTime);
+    outerData = interpolateData(outerData, N, startTime, endTime);
 
     % Put the data side-by-side.
     nI = numel(innerData.data);
@@ -56,7 +56,7 @@ elseif (isempty(selInner) || isempty(innerData.data)) && ...
     % Inner cannot be used, use outer.
 
     % Select the data and interpolate if required.
-    outerData = interpolateData(outerData, N);
+    outerData = interpolateData(outerData, N, startTime, endTime);
     
     selected  = nan(numel(outerData.data), 1);
     selected(selOuter) = outerData.data(selOuter);
@@ -67,7 +67,7 @@ elseif (isempty(selOuter) || isempty(outerData.data)) && ...
     % Outer cannot be used, use inner.
     
     % Select the data and interpolate if required.
-    innerData = interpolateData(innerData, N);
+    innerData = interpolateData(innerData, N, startTime, endTime);
      
     selected = nan(numel(innerData.data), 1);
     selected(selInner) = innerData.data(selInner);
@@ -108,24 +108,32 @@ end
 
 end
 
-function [newData] = interpolateData(data, samples)
+function [newData] = interpolateData(data, samples, startTime, endTime)
 % Check if the selOuter and outerData are of equal length, if not
 % interpolate by creating new timestamps of length(selOuter).
 
 if ~isequal(length(data.data), samples)
     
-    % Create new time series object.
-    ts1      = timeseries;
+    % Correct for the fact that 5 min will only sample a single hum/temp
+    % sample (sampled every 3 min).
+    if length(data.data) == 1
+        
+        % Fill all samples with a single value.
+        newData = timeseries;
+        newData.data = ones(samples,1)*data.data(1);
+        %newData.time = interp1(1:2, [startTime, endTime], linspace(1, 2, samples))'
+        
+    else
+        % Suppress warning that extrapolation doesn't work.
+        warning('off', 'MATLAB:linearinter:noextrap');
+        
+        % Interpolate the series with new timestamps.
+        newTime = interp1(1:2, [startTime, endTime], linspace(1, 2, samples))';
+        newData = resample(data, newTime);
     
-    % Set the number of observations to the number of selections.
-    ts1.data = 1:samples;
+         warning('on', 'MATLAB:linearinter:noextrap'); % restore warning state.
+    end
     
-    % Create new timestamps for the new length of data.
-    ts1.time = setuniformtime(ts1, 'Starttime', data.Time(1), 'EndTime', data.Time(end));
-    
-    % Resample the original data with the new number of timestamps.
-    newData  = resample(data, ts1.time);
-
 else
     
     % The data stays as it is...
