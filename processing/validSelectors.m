@@ -1,4 +1,4 @@
-function [selInner, selOuter, selMax] = validSelectors(validInner, validOuter,...
+function [selInner, selOuter, selMax, N] = validSelectors(validInner, validOuter,...
     startTime, endTime, plots)     
 
 if isempty(validInner) && isempty(validOuter)
@@ -7,23 +7,29 @@ if isempty(validInner) && isempty(validOuter)
 
 elseif isempty(validInner)
     
-    % Select Outer valid data.
+    % If the inner data is missing, we have only the outer data to go by,
+    % so we select Outer valid data.
     validO      = getsampleusingtime(validOuter, startTime, endTime);
     validI.data = [];
     selInner    = []; 
     selOuter    = find(validO.data == 1);
     selMax      = [];
+    N           = numel(validO.data);
     
 elseif isempty(validOuter)
     
-    % Select Inner valid data.
+    % If the outer data is missing, we have only the inner data to go by, 
+    % so we select Inner valid data.
     validO.data = [];
     validI      = getsampleusingtime(validInner, startTime, endTime);
     selInner    = find(validI.data == 1); 
     selOuter    = [];
     selMax      = [];
+    N           = numel(validI.data);
     
 else
+    
+    % We have both datasets, so we select the best of either.
     
     % Select valid data.
     validI = getsampleusingtime(validInner, startTime, endTime);

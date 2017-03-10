@@ -133,7 +133,7 @@ if ~isempty(INNER) || ~isempty(OUTER)
     
     % Loop through all the alarms.    
     for iStamp = 1:numel(alarmTimestamps)
-
+        
         % Alarm timestamp.
         alarmTime = alarmTimestamps(iStamp);
       
@@ -169,7 +169,7 @@ if ~isempty(INNER) || ~isempty(OUTER)
         nNan            = zeros(1,nSlots);
 
         for timeSlot = 1:nSlots
-        
+            
             % Get 15 minute periods of data prior to the phone alarms
             % plus 5 minutes during the task
             startTime = addtodate(alarmTime, onset(timeSlot), 'minute');
@@ -182,27 +182,27 @@ if ~isempty(INNER) || ~isempty(OUTER)
             % first.
             if ~isempty(INNER) || ~isempty(OUTER)
 
-                [selInner, selOuter, selMax] = validSelectors(validInner, validOuter,...
+                [selInner, selOuter, selMax, N] = validSelectors(validInner, validOuter,...
                     startTime, endTime, validSelectorsPlots);
                 
                 % Select the actual data samples.
                 luxSelected = validSelection(luxInner, luxOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, validSelectionPlots);
+                    selInner, selOuter, selMax, N, validSelectionPlots);
                 
                 claSelected = validSelection(claInner, claOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                 
                 csSelected = validSelection(csInner, csOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                 
                 actSelected = validSelection(actInner, actOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                                 
                 xSelected = validSelection(xInner, xOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
                                 
                 ySelected = validSelection(yInner, yOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, 'off');
+                    selInner, selOuter, selMax, N, 'off');
 
                 % Log10.
                 meanLux(timeSlot) = nanmean(log10(luxSelected + 1));

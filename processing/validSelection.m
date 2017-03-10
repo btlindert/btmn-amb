@@ -1,62 +1,35 @@
 function selected = validSelection(inner, outer, startTime, endTime,...
-    selInner, selOuter, selMax, plots)
+    selInner, selOuter, selMax, N, plots)
+% validSelection selects the inner or outer measurement based on the 
+% validity of the measurement.
+% Arguments:
+%   inner     - Entire timeseries of the inner sensor.
+%   outer     - Entire timesies of the outer senros.
+%   startTime - Start time of the current period of interest.
+%   endTime   - End time of the current period of interest.
+%   selInner  - N-by-1 vector of 0,1 indicating the inner epoch selection.
+%   selOuter  - N-by-1 vector of 0,1 indicating the outer epoch selection.
+%   selMax    - N-by-1 vector of 0,1 indicating the max selection of both
+%               sensors.
+%   N         - Number of observations in the light measurement.
+%
+% selInner, selOuter, 
 
-% validSelection selects the actual valid measurement from inner and outer.
+% Select the data.
+innerData = getsampleusingtime(inner, startTime, endTime);
+outerData = getsampleusingtime(outer, startTime, endTime);
 
-if ~isempty(outer) && ~isempty(selOuter)
- 
-    % Select the outer data
-    outerData = getsampleusingtime(outer, startTime, endTime);
+% Light, temp and hum are sampled at different frequencies. To interpolate
+% temp/hum with light. We need to know the number of light observations.
+
+if (~isempty(selInner) && ~isempty(innerData.data)) && ...
+        (~isempty(selOuter) && ~isempty(outerData.data))
     
-    % Check if the selOuter and outerData are of equal length, if not
-    % interpolate by creating new timestamps of lenght(selOuter).
-    if ~isequal(length(outerData.data), length(selOuter)) 
-        % Create new time series object.
-        ts1 = timeseries;
-        ts1.data = selOuter;
-        ts1.time = setuniformtime(ts1, 'Starttime', startTime, 'EndTime', endTime);
-        outerData = resample(outerData, ts1.time);
-    else
-        % outerData stays as it is...
-    end  
-end
-
-
-
-if ~isempty(inner) && ~isempty(selInner)
- 
-    % Select the outer data
-    innerData = getsampleusingtime(inner, startTime, endTime);
+    % Both inner and outer data is valid and present.
     
-    % Check if the selOuter and outerData are of equal length, if not
-    % interpolate by creating new timestamps of lenght(selOuter).
-    if ~isequal(length(innerData.data), length(selInner)) 
-        % Create new time series object.
-        ts1 = timeseries;
-        ts1.data = selInner;
-        ts1.time = setuniformtime(ts1, 'Starttime', startTime, 'EndTime', endTime);
-        innerData = resample(innerData, ts1.time);
-    else
-        % outerData stays as it is...
-    end  
-end
-
-
-if isempty(inner)
-
-    % Select the outer data
-    selected  = nan(numel(outerData.data), 1);
-    selected(selOuter) = outerData.data(selOuter);
-
-elseif isempty(outer)
-
-    % Select the inner data.
-    selected = nan(numel(innerData.data), 1);
-    selected(selInner) = innerData.data(selInner);
-    
-else
-    
-    % Select the data for this alarm.
+    % Select the data and interpolate if required.
+    innerData = interpolateData(innerData, N);
+    outerData = interpolateData(outerData, N);
 
     % Put the data side-by-side.
     nI = numel(innerData.data);
@@ -76,7 +49,34 @@ else
     selected(selMax)   = max(dataIO(selMax, :), [], 2);
     selected(selInner) = dataIO(selInner, 1);
     selected(selOuter) = dataIO(selOuter, 2);
+    
+elseif (isempty(selInner) || isempty(innerData.data)) && ...
+        (~isempty(selOuter) && ~isempty(outerData.data))
+    
+    % Inner cannot be used, use outer.
 
+    % Select the data and interpolate if required.
+    outerData = interpolateData(outerData, N);
+    
+    selected  = nan(numel(outerData.data), 1);
+    selected(selOuter) = outerData.data(selOuter);
+
+elseif (isempty(selOuter) || isempty(outerData.data)) && ...
+        (~isempty(selInner) && ~isempty(innerData.data))
+
+    % Outer cannot be used, use inner.
+    
+    % Select the data and interpolate if required.
+    innerData = interpolateData(innerData, N);
+     
+    selected = nan(numel(innerData.data), 1);
+    selected(selInner) = innerData.data(selInner);
+
+else
+    
+    % Neither inner nor outer can be validly selected, so set to NaN.
+    selected = nan(N,1);
+    
 end
 
 if strcmpi(plots, 'on')
@@ -106,4 +106,30 @@ if strcmpi(plots, 'on')
     title('Final selection');
 end
 
+end
+
+function [newData] = interpolateData(data, samples)
+% Check if the selOuter and outerData are of equal length, if not
+% interpolate by creating new timestamps of length(selOuter).
+
+if ~isequal(length(data.data), samples)
+    
+    % Create new time series object.
+    ts1      = timeseries;
+    
+    % Set the number of observations to the number of selections.
+    ts1.data = 1:samples;
+    
+    % Create new timestamps for the new length of data.
+    ts1.time = setuniformtime(ts1, 'Starttime', data.Time(1), 'EndTime', data.Time(end));
+    
+    % Resample the original data with the new number of timestamps.
+    newData  = resample(data, ts1.time);
+
+else
+    
+    % The data stays as it is...
+    newData = data;
+
+end 
 end
