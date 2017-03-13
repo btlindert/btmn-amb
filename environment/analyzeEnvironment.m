@@ -188,7 +188,7 @@ if ~isempty(INNER_LIGHT) || ~isempty(OUTER_LIGHT)
     disp('Processing...')
     
     % Open file and write headers.
-    fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-light_features.csv'], 'w');
+    fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_environment_features.csv'], 'w');
     fprintf(fid, [repmat('%s, ', 1, 6), '%s\n'],...
         'subjectId', 'alarmCounter', 'alarmLabel', 'formLabel', ... 
         'alarmTime', times, labels);     
@@ -269,14 +269,6 @@ if ~isempty(INNER_LIGHT) || ~isempty(OUTER_LIGHT)
                 ySelected = validSelection(yInner, yOuter, startTime, endTime,...
                     selInner, selOuter, selMax, N, 'off');
                 
-                % Humidity
-                humSelected = validSelection(humInner, humOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, N, 'off');
-                
-                % Temperature
-                tempSelected = validSelection(tempInner, tempOuter, startTime, endTime,...
-                    selInner, selOuter, selMax, N, 'off');
-                
                 % Log10.
                 medLux(timeSlot) = nanmedian(log10(luxSelected + 1));
                 
@@ -311,17 +303,39 @@ if ~isempty(INNER_LIGHT) || ~isempty(OUTER_LIGHT)
                 
                 % y
                 medY(timeSlot)   = nanmedian(ySelected);
-                                
-                % Humidity
-                medHum(timeSlot) = nanmedian(humSelected);
-                                
-                % Temperature
-                medTemp(timeSlot) = nanmedian(tempSelected);
-                
+                                          
                 % Number of NaNs
                 % NANs is equal for all variables, so let's just pick lux.
                 nNan(timeSlot)    = sum(isnan(luxSelected));
-    
+                
+                                
+                % Humidity
+                if ~isempty(INNER_HUM) || ~isempty(OUTER_HUM)
+                    
+                    humSelected = validSelection(humInner, humOuter, startTime, endTime,...
+                        selInner, selOuter, selMax, N, 'off');
+                    medHum(timeSlot) = nanmedian(humSelected);
+                
+                else
+                    
+                    % Humidity
+                    medHum(timeSlot) = NaN;
+                    
+                end
+                
+                % Temperature
+                if ~isempty(INNER_TEMP) || ~isempty(OUTER_TEMP)
+                    
+                    tempSelected = validSelection(tempInner, tempOuter, startTime, endTime,...
+                        selInner, selOuter, selMax, N, 'off');
+                    medTemp(timeSlot) = nanmedian(tempSelected);
+                    
+                else
+                    
+                    medTemp(timeSlot) = NaN;
+                
+                end
+                
             else % NaN.
                 
                 medLux(timeSlot)         = NaN;
@@ -365,13 +379,13 @@ if ~isempty(INNER_LIGHT) || ~isempty(OUTER_LIGHT)
         alarmLabel = alarmLabels{iStamp};
         formLabel  = formLabels{iStamp};
 
-        fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_ambient-light_features.csv'], 'a');
+        fid = fopen([OUTPUT_FOLDER 'btmn_' SUBJECT '_environment_features.csv'], 'a');
         fprintf(fid, ['%s, %4.0f, ', repmat('%s, ', 1, 5), ...
             repmat('%8.4f, ', 1, numel(prefix)*numel(suffix)-1), '%8.4f\n'], ...
             SUBJECT, alarmCounter(iStamp), alarmLabel, formLabel, ... 
             datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
-            sprintf([repmat('%s, ', 1, 5), '%s'], startTimes{:}), ...
-            sprintf([repmat('%s, ', 1, 5), '%s'], endTimes{:}), ... 
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], startTimes{:}), ...
+            sprintf([repmat('%s, ', 1, nSlots-1), '%s'], endTimes{:}), ... 
             duration, medLux, medThreeParLog, medFourParLog, medCla, medCs, medAct, medX, medY, medHum, medTemp, nNan);
         fclose(fid);
         
