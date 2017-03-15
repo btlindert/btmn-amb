@@ -156,6 +156,8 @@ if accChestPresent == 1 && accThighPresent == 1
         
         % Declare vars.
         classification = zeros(1,nSlots);
+        undef          = zeros(1,nSlots);
+        upright        = zeros(1,nSlots);
         standing       = zeros(1,nSlots);
         sitting        = zeros(1,nSlots);
         supine         = zeros(1,nSlots);
@@ -163,6 +165,8 @@ if accChestPresent == 1 && accThighPresent == 1
         prone          = zeros(1,nSlots);
         left           = zeros(1,nSlots);
         dynamic        = zeros(1,nSlots);
+        startTimes     = cell(1,nSlots);
+        endTimes       = cell(1,nSlots);
         
         for timeSlot = 1:nSlots
             
@@ -180,13 +184,16 @@ if accChestPresent == 1 && accThighPresent == 1
 
             if ~isempty(accChestData) && ~isempty(accThighData)
 
-                [classification(timeSlot), standing(timeSlot), sitting(timeSlot), ...
+                [classification(timeSlot), undef(timeSlot), upright(timeSlot), ...
+                    standing(timeSlot), sitting(timeSlot), ...
                     supine(timeSlot), right(timeSlot), prone(timeSlot), ...
                     left(timeSlot), dynamic(timeSlot)] = posture(accChestData, accThighData, 'off');
 
             else
 
                 classification(timeSlot) = NaN;
+                undef(timeSlot)          = NaN;
+                upright(timeSlot)        = NaN;
                 standing(timeSlot)       = NaN;
                 sitting(timeSlot)        = NaN;
                 supine(timeSlot)         = NaN;
@@ -211,7 +218,7 @@ if accChestPresent == 1 && accThighPresent == 1
             datestr(alarmTime, 'dd-mm-yyyy HH:MM'), ...
             sprintf([repmat('%s, ', 1, nSlots-1), '%s'], startTimes{:}), ...
             sprintf([repmat('%s, ', 1, nSlots-1), '%s'], endTimes{:}), ... 
-            classification, standing, sitting, supine, right, prone, ...
+            classification, undef, upright, standing, sitting, supine, right, prone, ...
             left, dynamic);
         fclose(fid);
     

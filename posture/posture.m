@@ -18,7 +18,8 @@ function [modeClassification, secUndefined, secUpright, secStanding, secSitting,
 %       4 - supine
 %       5 - sitting
 %       6 - standing
-%       7 - undefined
+%       7 - upright
+%       8 - undefined
 %
 % Copyright (c) 2015 Bart te Lindert
     
