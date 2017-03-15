@@ -120,14 +120,14 @@ if (exist(THIGH_PRESS, 'file') == 2) && (exist(THIGH_XML, 'file') == 2)
     
     % Create symbolic links.
     system(['ln -s ' THIGH_XML ' ' SYMLINK_FOLDER 'unisens.xml']);
-    system(['ln -s ' THIGH_PRESS ' ' SYMLINK_FOLDER 'tempskin.bin']);
+    system(['ln -s ' THIGH_PRESS ' ' SYMLINK_FOLDER 'press.bin']);
 
     % Load data
-    pressThigh = movisensRead([SYMLINK_FOLDER, 'tempskin.bin']);
+    pressThigh = movisensRead([SYMLINK_FOLDER, 'press.bin']);
 
     % Remove symbolic links.
     system(['rm ' SYMLINK_FOLDER 'unisens.xml']);
-    system(['rm ' SYMLINK_FOLDER 'tempskin.bin']);
+    system(['rm ' SYMLINK_FOLDER 'press.bin']);
 
 end
 
