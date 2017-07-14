@@ -113,7 +113,7 @@ end
 
 % Generate labels for header.
 prefix = {'startTime', 'endTime'};
-suffix = {'Rel', '15', '0'};
+suffix = {'rel', '15', '0'};
 times  = generateLabels(prefix, suffix);
 
 prefix = {'duration', 'meanLux', 'meanThreeParLog', 'meanFourParLog', 'meanCla', 'meanCs', 'meanAct', 'meanX', 'meanY', 'nNan'};   
